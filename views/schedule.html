@@ -1,0 +1,2011 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<title>SchedMaster — Manage Schedule</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/daisyui@4/dist/full.min.css" rel="stylesheet" type="text/css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
+<style>
+  :root {
+    --paper: #f2f4ee;
+    --surface: #fbfbf8;
+    --ink: #202a20;
+    --ink-soft: #5b6459;
+    --forest: #1f6b41;
+    --forest-deep: #14492c;
+    --rule: #dcdccb;
+    --rule-strong: #b9bfae;
+    --clay: #a8462c;
+  }
+  html { font-size: 118%; }
+  body { background: var(--paper); color: var(--ink); font-family: 'Inter', sans-serif; }
+  .font-display { font-family: 'Fraunces', serif; font-optical-sizing: auto; }
+
+  /* Top bar: quiet, paper-toned, no default navbar shadow */
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--rule);
+  }
+  .wordmark { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.35rem; color: var(--ink); letter-spacing: 0.01em; }
+
+  /* Sidebar: dark forest panel, icon tiles, live status under each step */
+  .app-shell { display:flex; min-height:calc(100vh - 53px); }
+  .side-nav {
+    width:17rem; flex-shrink:0; padding:1.1rem 0.5rem 1.4rem;
+    background:linear-gradient(180deg,#184a2e 0%,#0f3220 100%); color:#d3e4d8;
+    position:sticky; top:0; align-self:flex-start; height:calc(100vh - 53px); overflow-y:auto;
+    display:flex; flex-direction:column;
+  }
+  .side-card { margin:0 0.5rem 1rem; padding:0.9rem 1rem; border-radius:12px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.08); }
+  .side-card .name { font-family:'Fraunces',serif; font-weight:600; font-size:1.05rem; color:#fff; line-height:1.25; overflow-wrap:anywhere; }
+  .side-bar { height:6px; border-radius:99px; background:rgba(255,255,255,0.15); overflow:hidden; margin-top:0.6rem; }
+  .side-bar > div { height:100%; background:#6fd09b; border-radius:99px; transition:width .4s ease; }
+  .side-label { padding:0.9rem 1.1rem 0.35rem; font-size:0.72rem; letter-spacing:0.09em; text-transform:uppercase; color:rgba(211,228,216,0.55); }
+  .side-item { display:flex; align-items:center; gap:0.75rem; padding:0.5rem 0.65rem; margin:0.12rem 0.5rem; border-radius:12px; color:#d3e4d8; cursor:pointer; transition:background .15s ease, color .15s ease; }
+  .side-item:hover { background:rgba(255,255,255,0.09); color:#fff; }
+  .side-item.active { background:#f4f6ef; color:var(--forest-deep); box-shadow:0 2px 8px rgba(0,0,0,0.18); }
+  .side-ico { width:2.25rem; height:2.25rem; border-radius:10px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.1); flex-shrink:0; }
+  .side-ico svg { width:1.2rem; height:1.2rem; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+  .side-item.active .side-ico { background:var(--forest); color:#fff; }
+  .side-text { min-width:0; line-height:1.2; }
+  .side-title { font-size:1rem; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .side-item.active .side-title { font-weight:700; }
+  .side-sub { font-size:0.76rem; opacity:0.65; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .side-check { margin-left:auto; flex-shrink:0; width:1.3rem; height:1.3rem; border-radius:50%; background:#6fd09b; color:#0f3220; display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:800; }
+  .side-item.next .side-ico { box-shadow:0 0 0 2px #6fd09b; }
+  .side-foot { margin-top:auto; padding:1rem 0.5rem 0; display:flex; flex-direction:column; gap:0.5rem; }
+  .side-btn { display:flex; align-items:center; justify-content:center; gap:0.5rem; padding:0.6rem 0.8rem; border-radius:10px; font-size:0.92rem; font-weight:600; cursor:pointer; text-decoration:none; border:1px solid rgba(255,255,255,0.25); color:#fff; background:transparent; }
+  .side-btn:hover { background:rgba(255,255,255,0.1); }
+  .side-btn.solid { background:#f4f6ef; color:var(--forest-deep); border-color:#f4f6ef; }
+  .side-btn.solid:hover { background:#fff; }
+  .only-mobile { display:none; }
+  @media (max-width: 900px) {
+    .only-mobile { display:block; }
+    .app-shell { flex-direction:column; }
+    /* The step menu becomes a sticky, swipeable tab strip that stays in reach while you scroll */
+    .side-nav { width:100%; height:auto; position:sticky; top:0; z-index:30; flex-direction:row; overflow-x:auto; padding:0.5rem 0.6rem; gap:0.3rem;
+                scrollbar-width:none; -webkit-overflow-scrolling:touch; box-shadow:0 2px 8px rgba(0,0,0,.18); }
+    .side-nav::-webkit-scrollbar { display:none; }
+    .side-card, .side-label, .side-foot { display:none; }
+    .side-item { margin:0; flex-shrink:0; padding:0.4rem 0.7rem 0.4rem 0.45rem; }
+    .side-sub, .side-check { display:none; }
+    .side-ico { width:2rem; height:2rem; }
+    .topbar-school { max-width:8rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  }
+  @media (max-width: 640px) {
+    html { font-size: 100%; }
+    .topbar { padding-left:0.9rem !important; padding-right:0.9rem !important; }
+    .topbar-school { display:none; }
+    main.flex-1 { padding:1.1rem 0.9rem 5rem !important; }
+    .panel { padding:1.1rem 1rem; border-radius:10px !important; }
+    .section-heading { font-size:1.25rem; }
+    /* 16px fields stop iOS zooming the page on tap; bigger tap targets */
+    input, select, textarea, .input, .select { font-size:16px !important; }
+    .btn { min-height:2.75rem; }
+    .btn-sm { min-height:2.5rem; }
+    .btn-xs { min-height:2.25rem; }
+    /* Tables become stacked cards: each row is a card, each cell is "LABEL  value".
+       The labels are filled in from the column headers by the script at the bottom. */
+    .ledger-wrap { border-top:0; overflow-x:visible !important; }
+    .ledger-table, .ledger-table tbody, .ledger-table tbody tr, .ledger-table tbody td { display:block; width:100%; }
+    .ledger-table thead { display:none; }
+    .ledger-table tbody tr { background:var(--surface); border:1px solid var(--rule); border-radius:10px; margin-bottom:0.7rem; padding:0.25rem 0; box-shadow:0 1px 2px rgba(20,40,25,.05); }
+    .ledger-table tbody tr:hover { background:var(--surface); }
+    .ledger-table tbody td { display:flex; justify-content:space-between; align-items:baseline; gap:0.9rem; text-align:right; padding:0.45rem 0.85rem; border-bottom:1px dashed var(--rule); font-size:0.95rem; }
+    .ledger-table tbody td:last-child { border-bottom:0; }
+    .ledger-table tbody td::before { content:attr(data-label); flex-shrink:0; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft); text-align:left; }
+    .ledger-table tbody td:not([data-label])::before { display:none; }
+    .ledger-table tbody td:not([data-label]) { justify-content:flex-end; }
+    .ledger-table tbody td[colspan] { justify-content:center; text-align:center; }
+    .clamp2 { max-width:none; }
+    /* Dialogs slide up from the bottom like a phone sheet */
+    .modal-back { align-items:flex-end; padding:0; }
+    .modal-back > * { width:100% !important; max-width:100% !important; max-height:92vh; border-radius:16px 16px 0 0 !important; padding-bottom:calc(1.4rem + env(safe-area-inset-bottom)); overflow-y:auto; }
+    .help-card { width:100%; max-height:92vh; border-radius:16px 16px 0 0; }
+    .tip-bar { padding:0.7rem 0.8rem; }
+    .toast { width:calc(100% - 1.5rem); bottom:1rem; }
+  }
+  .panel { box-shadow:0 1px 3px rgba(20,40,25,0.06); border-radius:10px !important; }
+
+  /* Section heading, replaces card-title */
+  .section-heading { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.35rem; color: var(--ink); margin-bottom: 0.15rem; }
+  .section-sub { color: var(--ink-soft); font-size: 0.95rem; }
+
+  /* Panel: quiet form container, hairline border instead of shadow-card.
+     Capped width so form rows/inputs don't stretch edge-to-edge on wide
+     screens -- the ledger tables below are the ones that use full width. */
+  .panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 1.5rem 1.6rem; max-width: 860px; }
+
+  /* Ledger tables: hairline rules, no boxed shadow, generous row padding */
+  .ledger-wrap { border-top: 1px solid var(--rule-strong); }
+  .ledger-table { width: 100%; border-collapse: collapse; font-size: 1.05rem; }
+  .ledger-table thead th {
+    text-align: left; font-weight: 600; color: var(--ink-soft);
+    font-size: 0.88rem; letter-spacing: 0.02em;
+    padding: 0.65rem 0.7rem; border-bottom: 1px solid var(--rule-strong);
+    background: transparent;
+  }
+  .ledger-table tbody td { padding: 0.75rem 0.7rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  .ledger-table tbody tr:hover { background: rgba(31,107,65,0.04); }
+
+  /* Search box above lists/checklists -- same look everywhere it appears */
+  .search-box {
+    display: flex; align-items: center; gap: 0.5rem;
+    background: var(--surface); border: 1px solid var(--rule-strong); border-radius: 6px;
+    padding: 0.55rem 0.8rem; margin-bottom: 0.9rem; max-width: 420px;
+  }
+  .search-box svg { flex-shrink: 0; color: var(--ink-soft); }
+  .search-box input {
+    border: none; outline: none; background: transparent; width: 100%;
+    font-family: 'Inter', sans-serif; font-size: 1rem; color: var(--ink);
+  }
+
+  /* Accent overrides so the app's one accent color is the forest green,
+     not DaisyUI's default indigo — used deliberately, not everywhere */
+  .btn-primary { background: var(--forest); border-color: var(--forest); color: #fff; }
+  .btn-primary:hover { background: var(--forest-deep); border-color: var(--forest-deep); }
+  .btn-secondary { background: var(--clay); border-color: var(--clay); color: #fff; }
+  .btn-secondary:hover { background: #8c3a24; border-color: #8c3a24; }
+  .link-primary { color: var(--forest); }
+  .badge-ghost { background: rgba(31,107,65,0.08); border-color: var(--rule); color: var(--forest-deep); }
+  .btn-ghost.text-error { color: var(--clay); }
+  input[type=checkbox] { accent-color: var(--forest); width: 1.15rem; height: 1.15rem; }
+  .input, .select, .textarea { background: var(--surface); border-color: var(--rule-strong); font-size: 1rem; }
+  .input:focus, .select:focus, .textarea:focus { outline-color: var(--forest); border-color: var(--forest); }
+  .alert { background: var(--surface); border: 1px solid var(--rule); font-size: 1rem; }
+  [class*="text-base-content"] { color: var(--ink-soft) !important; }
+  .btn { font-size: 0.98rem; }
+  label.label-text, .label-text { font-size: 1rem; }
+  /* Long-title handling: chips, clamped cells, and a tidy subject picker */
+  .ledger-table tbody td { overflow-wrap: anywhere; }
+  .clamp2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; max-width:26rem; }
+  .cell-sub { font-size:0.85rem; color:var(--ink-soft); }
+  .chip { display:inline-block; padding:0.1rem 0.6rem; border-radius:999px; background:rgba(31,107,65,0.09); border:1px solid var(--rule); font-size:0.82rem; color:var(--forest-deep); margin:0 0.3rem 0.3rem 0; white-space:nowrap; max-width:14rem; overflow:hidden; text-overflow:ellipsis; vertical-align:middle; }
+  .chip-more { background:transparent; color:var(--ink-soft); cursor:help; }
+  .chip-warn { background:rgba(168,70,44,0.08); border-color:rgba(168,70,44,0.3); color:var(--clay); }
+  .pick-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(min(15rem,100%), 1fr)); gap:0.45rem; max-height:17rem; overflow-y:auto; padding:0.15rem 0.3rem 0.15rem 0; }
+  .pick-item { display:flex; align-items:flex-start; gap:0.6rem; padding:0.5rem 0.7rem; border:1px solid var(--rule); border-radius:6px; background:var(--surface); cursor:pointer; min-width:0; }
+  .pick-item:hover { border-color:var(--rule-strong); }
+  .pick-item.on { border-color:var(--forest); background:rgba(31,107,65,0.07); }
+  .pick-item input { margin-top:0.2rem; flex-shrink:0; }
+  .pick-item .code { font-weight:600; font-size:0.9rem; }
+  .pick-item .name { font-size:0.85rem; color:var(--ink-soft); line-height:1.25; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .group-label { font-size:0.78rem; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; color:var(--ink-soft); margin:0.7rem 0 0.35rem; }
+  select.select { max-width:100%; text-overflow:ellipsis; }
+  [x-cloak] { display: none !important; }
+  .step-row { display:flex; align-items:center; gap:0.9rem; padding:0.7rem 0.2rem; border-bottom:1px solid var(--rule); }
+  .step-row:last-child { border-bottom:none; }
+  .step-dot { width:2rem; height:2rem; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:0.9rem; flex-shrink:0; border:1.5px solid var(--rule-strong); color:var(--ink-soft); background:var(--surface); }
+  .step-dot.done { background:var(--forest); border-color:var(--forest); color:#fff; }
+  .step-dot.next { border-color:var(--forest); color:var(--forest-deep); box-shadow:0 0 0 3px rgba(31,107,65,0.15); }
+  .tour-card { position:fixed; right:1.5rem; bottom:1.5rem; width:min(24rem, calc(100vw - 2rem)); z-index:60; background:var(--surface); border:1px solid var(--rule-strong); border-radius:8px; padding:1.1rem 1.3rem; box-shadow:0 10px 30px rgba(20,40,25,0.22); }
+  .tip-bar { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; background:rgba(31,107,65,0.07); border:1px solid rgba(31,107,65,0.25); border-radius:6px; padding:0.65rem 1rem; margin-bottom:1.4rem; font-size:0.92rem; max-width:860px; }
+  .toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:0.6rem; margin-bottom:1rem; }
+  .toolbar .search-box { margin:0; flex:1; min-width:14rem; }
+  .pills { display:inline-flex; border:1px solid var(--rule-strong); border-radius:999px; overflow:hidden; background:var(--surface); }
+  .pill { padding:0.35rem 0.95rem; font-size:0.9rem; cursor:pointer; border:none; background:transparent; color:var(--ink-soft); }
+  .pill.on { background:var(--forest); color:#fff; }
+  .brk-box { margin-top:0.75rem; padding-top:0.75rem; border-top:1px dashed rgba(0,0,0,.15); }
+  .brk-chip { padding:0.3rem 0.8rem; font-size:0.85rem; cursor:pointer; border:1px solid rgba(0,0,0,.2); background:#fff; color:var(--ink-soft); border-radius:999px; }
+  .brk-chip:hover { border-color:var(--forest); }
+  .brk-chip.on { background:var(--forest); color:#fff; border-color:var(--forest); }
+  .sec-group { margin-bottom:1.3rem; }
+  .group-head { display:flex; align-items:center; gap:0.6rem; width:100%; text-align:left; padding:0.35rem 0; background:none; border:none; border-bottom:1px solid var(--rule); cursor:pointer; margin-bottom:0.7rem; }
+  .group-head .caret { display:inline-block; transition:transform .15s; }
+  .group-head.closed .caret { transform:rotate(-90deg); }
+  .sec-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(17rem,100%),1fr)); gap:0.8rem; }
+  .sec-card { background:var(--surface); border:1px solid var(--rule); border-radius:12px; padding:0.9rem 1rem; display:flex; flex-direction:column; gap:0.45rem; box-shadow:0 1px 3px rgba(20,40,25,0.05); }
+  .sec-card:hover { border-color:var(--rule-strong); }
+  .sec-name { font-family:'Fraunces',serif; font-weight:600; font-size:1.12rem; line-height:1.2; overflow-wrap:anywhere; }
+  .kind-badge { font-size:0.74rem; padding:0.12rem 0.55rem; border-radius:99px; white-space:nowrap; font-weight:600; }
+  .kind-badge.day { background:rgba(214,158,46,0.16); color:#8a5a00; }
+  .kind-badge.night { background:rgba(60,70,150,0.12); color:#2f3a8f; }
+  .kind-badge.any { background:rgba(0,0,0,0.06); color:var(--ink-soft); }
+  .mini-bar { height:5px; border-radius:99px; background:rgba(0,0,0,0.08); overflow:hidden; }
+  .mini-bar > div { height:100%; background:var(--forest); }
+  .sec-actions { display:flex; gap:0.2rem; margin-top:auto; padding-top:0.3rem; border-top:1px solid var(--rule); }
+  .toast { position:fixed; left:50%; transform:translateX(-50%); bottom:1.5rem; z-index:90; background:#1d2b22; color:#fff; padding:0.65rem 1rem; border-radius:10px; display:flex; align-items:center; gap:1rem; box-shadow:0 8px 24px rgba(0,0,0,0.3); max-width:calc(100vw - 2rem); }
+  .toast button { color:#8fe0b3; font-weight:700; background:none; border:none; cursor:pointer; }
+  .seg { display:inline-flex; border:1px solid var(--rule-strong); border-radius:8px; overflow:hidden; background:var(--surface); }
+  .seg button { padding:0.35rem 0.9rem; font-size:0.9rem; border:none; background:transparent; cursor:pointer; color:var(--ink-soft); }
+  .seg button.on { background:var(--forest); color:#fff; }
+  .wk-wrap { overflow-x:auto; border:1px solid var(--rule); border-radius:10px; background:var(--surface); }
+  .wk { display:grid; min-width:640px; }
+  .wk-head { padding:0.5rem 0.3rem; text-align:center; font-weight:600; border-bottom:1px solid var(--rule-strong); background:rgba(31,107,65,0.05); position:sticky; top:0; }
+  .wk-time { position:relative; border-right:1px solid var(--rule); }
+  .wk-time span { position:absolute; right:0.4rem; font-size:0.72rem; color:var(--ink-soft); transform:translateY(-50%); }
+  .wk-col { position:relative; border-left:1px solid var(--rule); background-image:linear-gradient(to bottom, var(--rule) 1px, transparent 1px); }
+  .wk-block { position:absolute; border-radius:6px; padding:0.2rem 0.4rem; font-size:0.78rem; line-height:1.15; overflow:hidden; cursor:pointer; text-align:left; border:none; border-left:4px solid; }
+  .wk-block:hover { filter:brightness(0.96); box-shadow:0 2px 8px rgba(0,0,0,0.18); z-index:5; }
+  .wk-block.clash { outline:2px solid var(--clay); background:rgba(168,70,44,0.14) !important; }
+  .tab-head { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:1.2rem; }
+  .tab-head .section-sub { margin-top:0.1rem; }
+  .next-card { background:linear-gradient(135deg,#1f6b41,#15492c); color:#fff; border-radius:14px; padding:1.6rem 1.8rem; margin-bottom:1.4rem; }
+  .next-card .section-heading { color:#fff; font-size:1.7rem; margin:0.2rem 0 0.3rem; }
+  .next-card .btn { border:none; }
+  .mini-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(13rem,100%),1fr)); gap:0.7rem; }
+  .mini { display:flex; align-items:center; gap:0.7rem; padding:0.7rem 0.8rem; border:1px solid var(--rule); border-radius:10px; background:var(--surface); cursor:pointer; text-align:left; }
+  .mini:hover { border-color:var(--forest); }
+  .mini-ico { width:2.1rem; height:2.1rem; border-radius:9px; background:rgba(31,107,65,0.09); color:var(--forest); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .mini-ico svg { width:1.15rem; height:1.15rem; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+  .mini-t { display:block; font-weight:600; line-height:1.2; }
+  .mini-s { display:block; font-size:0.78rem; color:var(--ink-soft); }
+  .kind-btn { display:flex; flex-direction:column; align-items:flex-start; gap:0.1rem; padding:0.75rem 0.9rem; border:1.5px solid var(--rule-strong); border-radius:10px; background:var(--surface); cursor:pointer; text-align:left; }
+  .kind-btn:hover { border-color:var(--forest); }
+  .kind-btn.on { border-color:var(--forest); background:rgba(31,107,65,0.08); box-shadow:0 0 0 2px rgba(31,107,65,0.15); }
+  .kind-btn span { font-size:0.82rem; color:var(--ink-soft); }
+  .modal-back { position:fixed; inset:0; background:rgba(15,40,25,0.45); z-index:70; display:flex; align-items:center; justify-content:center; padding:1rem; }
+  .help-card { background:var(--surface); border-radius:12px; width:min(34rem,100%); max-height:85vh; overflow-y:auto; padding:1.4rem 1.6rem; box-shadow:0 20px 50px rgba(0,0,0,0.3); }
+  details.faq { border-bottom:1px solid var(--rule); padding:0.6rem 0; }
+  details.faq summary { cursor:pointer; font-weight:600; }
+  details.faq p { margin-top:0.4rem; font-size:0.92rem; color:var(--ink-soft); }
+  .rules-box { border: 1px dashed var(--rule-strong); border-radius: 6px; padding: 0.8rem 1rem; background: rgba(31,107,65,0.03); }
+</style>
+</head>
+<body class="min-h-screen" x-data="manage()" x-init="init()">
+
+<div class="topbar px-6 py-3 flex items-center justify-between">
+  <a href="dashboard.html" class="wordmark flex items-center gap-2"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1f6b41" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>SchedMaster</a>
+  <div class="flex items-center gap-2 sm:gap-3">
+    <span class="text-sm topbar-school" style="color:var(--ink-soft)" x-text="scheduleName"></span>
+    <!-- On phones the sidebar footer is hidden, so its links live in this menu -->
+    <div class="dropdown dropdown-end only-mobile">
+      <label tabindex="0" class="btn btn-sm btn-outline">Share ▾</label>
+      <ul tabindex="0" class="dropdown-content menu p-2 rounded-box w-60 z-[60] mt-1" style="background:var(--surface);border:1px solid var(--rule);box-shadow:0 8px 24px rgba(0,0,0,.15)">
+        <li><a :href="publicViewUrl" target="_blank">🎓 Student view</a></li>
+        <li><a :href="teacherViewUrl" target="_blank">👩‍🏫 Teacher view</a></li>
+        <li><a :href="'accounts.html?id=' + scheduleId">👥 Accounts &amp; access</a></li>
+        <li><a href="dashboard.html">← All schedules</a></li>
+      </ul>
+    </div>
+    <button class="btn btn-sm btn-outline" @click="helpOpen = true">? Help</button>
+  </div>
+</div>
+
+<div class="app-shell">
+
+  <nav class="side-nav">
+    <div class="side-card">
+      <div class="text-xs" style="opacity:.6">Working on</div>
+      <div class="name" x-text="scheduleName || 'Your schedule'"></div>
+      <div class="side-bar"><div :style="'width:' + (doneCount() / workflow.filter(w => !w.optional).length * 100) + '%'"></div></div>
+      <div class="text-xs mt-1.5" style="opacity:.75" x-text="doneCount() + ' of ' + workflow.filter(w => !w.optional).length + ' steps done'"></div>
+    </div>
+
+    <a class="side-item" :class="tab === 'guide' ? 'active' : ''" @click="tab = 'guide'">
+      <span class="side-ico"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg></span>
+      <span class="side-text"><div class="side-title">Getting Started</div><div class="side-sub">Your next step</div></span>
+    </a>
+
+    <div class="side-label">Set up in order</div>
+    <template x-for="w in workflow" :key="w.tab">
+      <a class="side-item" :class="[tab === w.tab ? 'active' : '', firstTodo()?.tab === w.tab ? 'next' : ''].join(' ')" @click="tab = w.tab">
+        <span class="side-ico"><svg viewBox="0 0 24 24" x-html="w.icon"></svg></span>
+        <span class="side-text">
+          <div class="side-title" x-text="w.n + '. ' + w.label"></div>
+          <div class="side-sub" x-text="stepCount(w.tab) ? stepCount(w.tab) + ' added' : (w.optional ? 'Optional' : 'Not started')"></div>
+        </span>
+        <span class="side-check" x-show="stepDone(w.tab)">✓</span>
+      </a>
+    </template>
+
+    <div class="side-foot">
+      <a class="side-btn solid" :href="publicViewUrl" target="_blank">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>
+        Student view
+      </a>
+      <a class="side-btn solid" :href="teacherViewUrl" target="_blank">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Teacher view
+      </a>
+      <a class="side-btn" :href="'accounts.html?id=' + scheduleId">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Accounts &amp; access
+      </a>
+      <button class="side-btn" @click="helpOpen = true">? Help</button>
+    </div>
+  </nav>
+
+  <main class="flex-1 px-8 py-7 min-w-0">
+
+  <!-- GETTING STARTED TAB -->
+  <div x-show="tab === 'guide'" style="max-width:52rem">
+    <div class="next-card" x-show="firstTodo()">
+      <div class="text-xs uppercase tracking-wide" style="opacity:.75" x-text="'Next step · ' + doneCount() + ' of ' + workflow.filter(w => !w.optional).length + ' done'"></div>
+      <h2 class="section-heading" x-text="firstTodo()?.n + '. ' + firstTodo()?.label"></h2>
+      <p class="mb-4" style="opacity:.9" x-text="firstTodo()?.line"></p>
+      <button class="btn btn-sm" style="background:#fff;color:#15492c" @click="tab = firstTodo().tab" x-text="'Go to ' + firstTodo()?.label + ' →'"></button>
+    </div>
+    <div class="next-card" x-show="!firstTodo()">
+      <h2 class="section-heading">You're all set</h2>
+      <p class="mb-4" style="opacity:.9">Your schedule is built. Share it with students or adjust it anytime.</p>
+      <div class="flex gap-2 flex-wrap">
+        <a class="btn btn-sm" style="background:#fff;color:#15492c" :href="publicViewUrl" target="_blank">Open student view</a>
+        <a class="btn btn-sm" style="background:#fff;color:#15492c" :href="teacherViewUrl" target="_blank">Open teacher view</a>
+        <a class="btn btn-sm" style="background:#fff;color:#15492c" :href="'accounts.html?id=' + scheduleId">Accounts &amp; access</a>
+        <button class="btn btn-sm btn-outline" style="color:#fff;border-color:rgba(255,255,255,.5)" @click="tab = 'assignments'">See schedule</button>
+      </div>
+    </div>
+
+    <div class="mini-grid">
+      <template x-for="w in workflow" :key="w.tab">
+        <button class="mini" @click="tab = w.tab">
+          <span class="mini-ico"><svg viewBox="0 0 24 24" x-html="w.icon"></svg></span>
+          <span class="min-w-0"><span class="mini-t" x-text="w.n + '. ' + w.label"></span><span class="mini-s" x-text="stepCount(w.tab) ? stepCount(w.tab) + ' added' : (w.optional ? 'Optional' : 'To do')"></span></span>
+          <span class="side-check ml-auto" x-show="stepDone(w.tab)">✓</span>
+        </button>
+      </template>
+    </div>
+  </div>
+
+  <!-- DEPARTMENTS TAB -->
+
+  <div x-show="tab === 'departments'">
+    <div class="tab-head">
+      <div><h2 class="section-heading" x-text="stepOf('departments').label"></h2><div class="section-sub" x-text="stepOf('departments').line"></div></div>
+      <div class="flex gap-2 flex-wrap">
+        <button class="btn btn-primary btn-sm" x-show="!(adding.departments || departments.length === 0)" @click="adding.departments = true" x-text="stepOf('departments').addLabel"></button>
+        <button class="btn btn-ghost btn-sm" @click="openBulk('departments')">Paste a list</button>
+        <button class="btn btn-ghost btn-sm" x-show="stepDone('departments') && nextStepAfter('departments')" @click="tab = nextStepAfter('departments').tab" x-text="'Next: ' + (nextStepAfter('departments')?.label) + ' →'"></button>
+      </div>
+    </div>
+    <div class="panel mb-8" x-show="adding.departments || departments.length === 0">
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center justify-between"><h2 class="section-heading">Add Department</h2><button type="button" class="btn btn-ghost btn-xs" x-show="departments.length > 0" @click="adding.departments = false">Close</button></div>
+        <div x-show="errors.departments" x-text="errors.departments" class="alert alert-error text-sm py-2"></div>
+        <form @submit.prevent="addDepartment" class="flex gap-2">
+          <input x-model="newDepartment.name" type="text" placeholder="e.g. IT Department" class="input input-bordered flex-1 max-w-xs" required>
+          <button class="btn btn-primary">Add</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="search-box">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" x-model="search.departments" placeholder="Search departments…">
+    </div>
+
+    <div class="ledger-wrap overflow-x-auto">
+      <table class="ledger-table">
+        <thead><tr><th>Department</th><th></th></tr></thead>
+        <tbody>
+          <template x-for="d in filterList(departments, search.departments, ['name'])" :key="d.id">
+            <tr>
+              <td x-text="d.name"></td>
+              <td class="whitespace-nowrap text-right"><button class="btn btn-sm btn-ghost" @click="openEditor('department', d)">Edit</button><button class="btn btn-sm btn-ghost text-error" @click="requestDelete('department', d)">Delete</button></td>
+            </tr>
+          </template>
+          <tr x-show="departments.length === 0"><td colspan="2" class="text-center text-base-content/50">No departments yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- INSTRUCTORS TAB -->
+  <div x-show="tab === 'instructors'">
+    <div class="tab-head">
+      <div><h2 class="section-heading" x-text="stepOf('instructors').label"></h2><div class="section-sub" x-text="stepOf('instructors').line"></div></div>
+      <div class="flex gap-2 flex-wrap">
+        <button class="btn btn-primary btn-sm" x-show="!(adding.instructors || instructors.length === 0)" @click="adding.instructors = true" x-text="stepOf('instructors').addLabel"></button>
+        <button class="btn btn-ghost btn-sm" @click="openBulk('instructors')">Paste a list</button>
+        <button class="btn btn-ghost btn-sm" x-show="stepDone('instructors') && nextStepAfter('instructors')" @click="tab = nextStepAfter('instructors').tab" x-text="'Next: ' + (nextStepAfter('instructors')?.label) + ' →'"></button>
+      </div>
+    </div>
+    <div class="panel mb-8" x-show="adding.instructors || instructors.length === 0">
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center justify-between"><h2 class="section-heading">Add Instructor</h2><button type="button" class="btn btn-ghost btn-xs" x-show="instructors.length > 0" @click="adding.instructors = false">Close</button></div>
+        <div x-show="errors.instructors" x-text="errors.instructors" class="alert alert-error text-sm py-2"></div>
+        <form @submit.prevent="addInstructor" class="flex flex-col gap-2">
+          <div class="flex gap-2 flex-wrap">
+            <input x-model="newInstructor.name" type="text" placeholder="Full name" class="input input-bordered flex-1 min-w-[200px]" required>
+            <select x-model="newInstructor.employment_type" class="select select-bordered">
+              <option value="full-time">Full-time</option>
+              <option value="part-time">Part-time</option>
+            </select>
+            <input x-model.number="newInstructor.max_teaching_hours" type="number" step="0.5" min="0.5"
+                   placeholder="Max teaching hrs/wk" class="input input-bordered w-44" title="Actual teaching load cap, not total contracted hours (e.g. full-time = 6 teaching hrs even if on-site 8)">
+          </div>
+          <div>
+            <div class="text-xs font-semibold text-base-content/60 mb-1">Can teach:</div>
+            <div class="search-box">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input type="text" x-model="search.newInstructorSubjects" placeholder="Search subjects…">
+            </div>
+            <template x-for="grp in groupedSubjects(search.newInstructorSubjects)" :key="grp.key">
+              <div class="mb-2">
+                <div class="group-label" x-text="grp.label"></div>
+                <div class="pick-grid">
+                  <template x-for="sub in grp.subjects" :key="sub.id">
+                    <label class="pick-item" :class="(newInstructor.subject_ids.includes(sub.id)) ? 'on' : ''" :title="subjectLabel(sub)">
+                      <input type="checkbox" :value="sub.id" class="checkbox"
+                             :checked="newInstructor.subject_ids.includes(sub.id)"
+                             @change="toggleInArray(newInstructor.subject_ids, sub.id)">
+                      <span class="min-w-0"><span class="code block"><span x-text="sub.subject_code || '—'"></span><span class="font-normal text-xs" style="color:var(--ink-soft)" x-text="' · ' + sub.units + ' units'"></span></span><span class="name" x-text="sub.subject_name"></span></span>
+                    </label>
+                  </template>
+                </div>
+              </div>
+            </template>
+            <span x-show="subjects.length === 0" class="text-xs text-base-content/50">Add subjects first.</span>
+            <span x-show="subjects.length > 0 && groupedSubjects(search.newInstructorSubjects).length === 0" class="text-xs text-base-content/50">No subjects match your search.</span>
+          </div>
+          <button class="btn btn-primary w-fit">Add</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="search-box">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" x-model="search.instructors" placeholder="Search instructors by name…">
+    </div>
+
+    <div class="ledger-wrap overflow-x-auto">
+      <table class="ledger-table">
+        <thead><tr><th>Name</th><th>Type</th><th>Max Hrs/Wk</th><th>Qualified Subjects</th><th></th></tr></thead>
+        <tbody>
+          <template x-for="i in filterList(instructors, search.instructors, ['name'])" :key="i.id">
+            <tr>
+              <td x-text="i.name"></td>
+              <td><span class="badge" :class="i.employment_type === 'full-time' ? 'badge-primary' : 'badge-secondary'" x-text="i.employment_type"></span></td>
+              <td x-text="i.max_teaching_hours"></td>
+              <td>
+                <div>
+                  <template x-for="c in subjectChips(i.subject_ids)" :key="c.key">
+                    <span class="chip" :class="c.more ? 'chip-more' : ''" :title="c.title" x-text="c.text"></span>
+                  </template>
+                  <span x-show="!(i.subject_ids || []).length" class="chip chip-warn">No subjects ticked</span>
+                </div>
+              </td>
+              <td class="whitespace-nowrap text-right"><button class="btn btn-sm btn-ghost" @click="openEditor('instructor', i)">Edit</button><button class="btn btn-sm btn-ghost text-error" @click="requestDelete('instructor', i)">Delete</button></td>
+            </tr>
+          </template>
+          <tr x-show="instructors.length === 0"><td colspan="5" class="text-center text-base-content/50">No instructors yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- SECTIONS TAB -->
+  <div x-show="tab === 'sections'">
+    <div class="tab-head">
+      <div><h2 class="section-heading" x-text="stepOf('sections').label"></h2><div class="section-sub" x-text="stepOf('sections').line"></div></div>
+      <div class="flex gap-2 flex-wrap">
+        <button class="btn btn-primary btn-sm" x-show="!(adding.sections || sections.length === 0)" @click="adding.sections = true" x-text="stepOf('sections').addLabel"></button>
+        <button class="btn btn-ghost btn-sm" x-show="sections.length > 0" @click="bulkBreak.open = !bulkBreak.open">🍴 Set lunch for many</button>
+        <button class="btn btn-ghost btn-sm" x-show="stepDone('sections') && nextStepAfter('sections')" @click="tab = nextStepAfter('sections').tab" x-text="'Next: ' + (nextStepAfter('sections')?.label) + ' →'"></button>
+      </div>
+    </div>
+    <div class="panel mb-6" x-show="bulkBreak.open && sections.length > 0" x-cloak>
+      <div class="flex items-center justify-between mb-1"><h2 class="section-heading">Lunch break for many sections</h2><button type="button" class="btn btn-ghost btn-xs" @click="bulkBreak.open = false">Close</button></div>
+      <div class="text-sm mb-3" style="color:var(--ink-soft)">Pick the hours and who gets them, then Apply. The auto-generator and the manual class form will keep every class out of this time.</div>
+      <div x-show="bulkBreak.error" x-text="bulkBreak.error" class="alert alert-error text-sm py-2 mb-2"></div>
+      <div x-show="bulkBreak.warn" x-text="bulkBreak.warn" class="alert alert-warning text-sm py-2 mb-2"></div>
+      <div class="flex flex-wrap gap-2 items-center mb-3">
+        <template x-for="c in breakChips" :key="c.key">
+          <button type="button" class="brk-chip" :class="breakIs(bulkBreak, c) ? 'on' : ''" @click="setBreak(bulkBreak, c.s, c.e)" x-text="c.label"></button>
+        </template>
+        <span class="text-xs text-base-content/50 ml-2">or custom:</span>
+        <input type="time" x-model="bulkBreak.break_start" class="input input-bordered input-sm">
+        <span>to</span>
+        <input type="time" x-model="bulkBreak.break_end" class="input input-bordered input-sm">
+      </div>
+      <div class="flex flex-wrap gap-2 items-center">
+        <select x-model="bulkBreak.scope" class="select select-bordered select-sm">
+          <option value="day">Day sections only</option>
+          <option value="night">Night sections only</option>
+          <option value="all">All sections</option>
+        </select>
+        <button type="button" class="btn btn-primary btn-sm" :disabled="bulkBreak.busy" @click="applyBulkBreak(false)">Apply</button>
+        <button type="button" class="btn btn-ghost btn-sm" :disabled="bulkBreak.busy" @click="applyBulkBreak(true)">Remove break instead</button>
+      </div>
+    </div>
+
+    <div class="panel mb-8" x-show="adding.sections || sections.length === 0">
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center justify-between"><h2 class="section-heading">Add Section</h2><button type="button" class="btn btn-ghost btn-xs" x-show="sections.length > 0" @click="adding.sections = false">Close</button></div>
+        <div x-show="errors.sections" x-text="errors.sections" class="alert alert-error text-sm py-2"></div>
+        <form @submit.prevent="addSection" class="flex flex-col gap-2">
+          <div class="flex gap-2 flex-wrap">
+            <div class="flex-1 min-w-[150px]"><input x-model="newSection.section_name" type="text" placeholder="e.g. BSIT-3A" class="input input-bordered w-full" :class="nameTaken(newSection.section_name) ? 'input-error' : ''" required><div x-show="nameTaken(newSection.section_name)" class="text-error text-xs mt-1">That name is already used. Pick a different one.</div></div>
+            <select x-model.number="newSection.department_id" class="select select-bordered min-w-[180px]">
+              <option :value="null">No department (general)</option>
+              <template x-for="d in departments" :key="d.id">
+                <option :value="d.id" x-text="d.name"></option>
+              </template>
+            </select>
+            <input x-model="newSection.program" type="text" placeholder="Program (e.g. BSIT)" class="input input-bordered flex-1 min-w-[150px]">
+            <input x-model="newSection.year_level" type="text" placeholder="Year level" class="input input-bordered w-32">
+          </div>
+          <div class="rules-box">
+            <div class="text-xs font-semibold text-base-content/60 mb-2">When does this class meet?</div>
+            <div class="grid grid-cols-2 gap-2">
+              <button type="button" class="kind-btn" :class="ruleKind(newSection) === 'day' ? 'on' : ''" @click="applyPreset('day')">
+                <strong>☀ Day class</strong><span>7:30 AM – 5:00 PM · lunch 12–1</span>
+              </button>
+              <button type="button" class="kind-btn" :class="ruleKind(newSection) === 'night' ? 'on' : ''" @click="applyPreset('night')">
+                <strong>🌙 Night class</strong><span>5:30 PM – 9:00 PM, longer week</span>
+              </button>
+            </div>
+            <div class="brk-box">
+              <div class="text-xs font-semibold text-base-content/60 mb-1">🍴 Lunch break <span class="font-normal">— no class is placed during it</span></div>
+              <div class="flex flex-wrap gap-2 items-center">
+                <template x-for="c in breakChips" :key="c.key">
+                  <button type="button" class="brk-chip" :class="breakIs(newSection, c) ? 'on' : ''" @click="setBreak(newSection, c.s, c.e)" x-text="c.label"></button>
+                </template>
+                <button type="button" class="brk-chip" :class="!hasBreak(newSection) ? 'on' : ''" @click="setBreak(newSection, '', '')">No break</button>
+              </div>
+              <div class="flex gap-2 items-center flex-wrap mt-2">
+                <span class="text-xs text-base-content/50">Custom:</span>
+                <input type="time" x-model="newSection.break_start" class="input input-bordered input-sm">
+                <span>to</span>
+                <input type="time" x-model="newSection.break_end" class="input input-bordered input-sm">
+              </div>
+            </div>
+            <details class="mt-2">
+              <summary class="text-sm cursor-pointer" style="color:var(--forest)">Customize days and hours</summary>
+              <div class="mt-2">
+                <div class="text-xs text-base-content/50 mb-1" title="Leave all unchecked to allow any pattern">Days it may use</div>
+                <div class="flex flex-wrap gap-3 mb-2">
+                  <template x-for="p in patterns" :key="p.id">
+                    <label class="label cursor-pointer gap-2 justify-start">
+                      <input type="checkbox" class="checkbox" :checked="newSection.pattern_ids.includes(p.id)" @change="toggleInArray(newSection.pattern_ids, p.id)">
+                      <span class="label-text" x-text="p.name + ' (' + dayNames(p.days) + ')'"></span>
+                    </label>
+                  </template>
+                  <span x-show="patterns.length === 0" class="text-xs text-base-content/50">Add class days first.</span>
+                </div>
+                <div class="text-xs text-base-content/50 mb-1">Hours</div>
+                <div class="flex gap-2 items-center flex-wrap">
+                  <input type="time" x-model="newSection.window_start" class="input input-bordered input-sm">
+                  <span>to</span>
+                  <input type="time" x-model="newSection.window_end" class="input input-bordered input-sm">
+                </div>
+              </div>
+            </details>
+          </div>
+          <div>
+            <div class="text-xs font-semibold text-base-content/60 mb-1">Subjects this term:</div>
+            <div class="search-box">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input type="text" x-model="search.newSectionSubjects" placeholder="Search subjects…">
+            </div>
+            <template x-for="grp in groupedSubjects(search.newSectionSubjects)" :key="grp.key">
+              <div class="mb-2">
+                <div class="group-label" x-text="grp.label"></div>
+                <div class="pick-grid">
+                  <template x-for="sub in grp.subjects" :key="sub.id">
+                    <label class="pick-item" :class="(newSection.subject_ids.includes(sub.id)) ? 'on' : ''" :title="subjectLabel(sub)">
+                      <input type="checkbox" :value="sub.id" class="checkbox"
+                             :checked="newSection.subject_ids.includes(sub.id)"
+                             @change="toggleInArray(newSection.subject_ids, sub.id)">
+                      <span class="min-w-0"><span class="code block"><span x-text="sub.subject_code || '—'"></span><span class="font-normal text-xs" style="color:var(--ink-soft)" x-text="' · ' + sub.units + ' units'"></span></span><span class="name" x-text="sub.subject_name"></span></span>
+                    </label>
+                  </template>
+                </div>
+              </div>
+            </template>
+            <span x-show="subjects.length === 0" class="text-xs text-base-content/50">Add subjects first.</span>
+            <span x-show="subjects.length > 0 && groupedSubjects(search.newSectionSubjects).length === 0" class="text-xs text-base-content/50">No subjects match your search.</span>
+          </div>
+          <button class="btn btn-primary w-fit" :disabled="nameTaken(newSection.section_name)">Add</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-box">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" x-model="search.sections" placeholder="Search sections…">
+      </div>
+      <div class="pills">
+        <button class="pill" :class="secFilter.kind === 'all' ? 'on' : ''" @click="secFilter.kind = 'all'" x-text="'All ' + sections.length"></button>
+        <button class="pill" :class="secFilter.kind === 'day' ? 'on' : ''" @click="secFilter.kind = 'day'" x-text="'☀ Day ' + sections.filter(s => kindOf(s) !== 'night').length"></button>
+        <button class="pill" :class="secFilter.kind === 'night' ? 'on' : ''" @click="secFilter.kind = 'night'" x-text="'🌙 Night ' + sections.filter(s => kindOf(s) === 'night').length"></button>
+      </div>
+      <select class="select select-bordered select-sm" x-model="secFilter.dept" x-show="departments.length > 0">
+        <option value="all">All departments</option>
+        <template x-for="d in departments" :key="d.id"><option :value="String(d.id)" x-text="d.name"></option></template>
+        <option value="none">General</option>
+      </select>
+    </div>
+
+    <template x-for="g in groupedSections()" :key="g.key">
+      <div class="sec-group">
+        <button class="group-head" :class="collapsed[g.key] ? 'closed' : ''" @click="collapsed[g.key] = !collapsed[g.key]">
+          <span class="caret">▾</span>
+          <strong x-text="g.label"></strong>
+          <span class="text-sm" style="color:var(--ink-soft)" x-text="g.sections.length + (g.sections.length === 1 ? ' section' : ' sections')"></span>
+        </button>
+        <div class="sec-grid" x-show="!collapsed[g.key]">
+          <template x-for="s in g.sections" :key="s.id">
+            <div class="sec-card">
+              <div class="flex items-start justify-between gap-2">
+                <div class="sec-name" x-text="s.section_name"></div>
+                <span class="kind-badge" :class="kindOf(s)" x-text="kindOf(s) === 'day' ? '☀ Day' : (kindOf(s) === 'night' ? '🌙 Night' : 'Any time')"></span>
+              </div>
+              <div class="cell-sub" x-text="[s.program, s.year_level].filter(Boolean).join(' · ') || 'No program or year'"></div>
+              <div>
+                <div class="text-sm" :style="sectionProgress(s).total && sectionProgress(s).done === sectionProgress(s).total ? 'color:var(--forest)' : ''"
+                     x-text="sectionProgress(s).total ? (sectionProgress(s).done === sectionProgress(s).total ? '✓ All ' + sectionProgress(s).total + ' subjects scheduled' : sectionProgress(s).done + ' of ' + sectionProgress(s).total + ' subjects scheduled') : 'No subjects yet'"></div>
+                <div class="mini-bar mt-1" x-show="sectionProgress(s).total"><div :style="'width:' + (sectionProgress(s).done / sectionProgress(s).total * 100) + '%'"></div></div>
+              </div>
+              <div>
+                <template x-for="c in subjectChips(s.subject_ids, 3)" :key="c.key">
+                  <span class="chip" :class="c.more ? 'chip-more' : ''" :title="c.title" x-text="c.text"></span>
+                </template>
+                <span x-show="!(s.subject_ids || []).length" class="chip chip-warn">Tick its subjects (Edit)</span>
+              </div>
+              <div class="cell-sub" x-text="rulesParts(s).win"></div>
+              <div class="cell-sub" x-show="rulesParts(s).brk" x-text="'🍴 Lunch ' + rulesParts(s).brk"></div>
+              <div class="cell-sub" x-show="!rulesParts(s).brk" style="opacity:.6">🍴 No lunch break set</div>
+              <div class="sec-actions">
+                <button class="btn btn-xs btn-ghost" @click="openEditor('section', s)">Edit</button>
+                <button class="btn btn-xs btn-ghost" @click="openDuplicate(s)">Duplicate</button>
+                <button class="btn btn-xs btn-ghost text-error ml-auto" @click="requestDelete('section', s)">Delete</button>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </template>
+    <div x-show="sections.length === 0" class="text-center text-base-content/50 py-8">No sections yet.</div>
+    <div x-show="sections.length > 0 && groupedSections().length === 0" class="text-center text-base-content/50 py-8">No sections match.</div>
+  </div>
+
+  <!-- SUBJECTS TAB -->
+  <div x-show="tab === 'subjects'">
+    <div class="tab-head">
+      <div><h2 class="section-heading" x-text="stepOf('subjects').label"></h2><div class="section-sub" x-text="stepOf('subjects').line"></div></div>
+      <div class="flex gap-2 flex-wrap">
+        <button class="btn btn-primary btn-sm" x-show="!(adding.subjects || subjects.length === 0)" @click="adding.subjects = true" x-text="stepOf('subjects').addLabel"></button>
+        <button class="btn btn-ghost btn-sm" @click="openBulk('subjects')">Paste a list</button>
+        <button class="btn btn-ghost btn-sm" x-show="stepDone('subjects') && nextStepAfter('subjects')" @click="tab = nextStepAfter('subjects').tab" x-text="'Next: ' + (nextStepAfter('subjects')?.label) + ' →'"></button>
+      </div>
+    </div>
+    <div class="panel mb-8" x-show="adding.subjects || subjects.length === 0">
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center justify-between"><h2 class="section-heading">Add Subject</h2><button type="button" class="btn btn-ghost btn-xs" x-show="subjects.length > 0" @click="adding.subjects = false">Close</button></div>
+        <div x-show="errors.subjects" x-text="errors.subjects" class="alert alert-error text-sm py-2"></div>
+        <form @submit.prevent="addSubject" class="flex gap-2 flex-wrap">
+          <input x-model="newSubject.subject_code" type="text" placeholder="Code, e.g. IM 414" class="input input-bordered w-36">
+          <input x-model="newSubject.subject_name" type="text" placeholder="Descriptive title, e.g. Shop Supervision and Apprenticeship Training" class="input input-bordered flex-1 min-w-[200px]" required>
+          <input x-model="newSubject.units" type="number" step="0.5" placeholder="Units" class="input input-bordered w-28">
+          <select x-model.number="newSubject.department_id" class="select select-bordered min-w-[180px]">
+            <option :value="null">Common / General Education</option>
+            <template x-for="d in departments" :key="d.id">
+              <option :value="d.id" x-text="d.name"></option>
+            </template>
+          </select>
+          <select x-model="newSubject.sitting_mode" class="select select-bordered min-w-[180px]" title="One sitting = a single continuous block on one day, so the teacher stays in one room">
+            <option value="auto">Meeting: automatic</option><option value="one">Always one sitting</option><option value="split">Allow splitting across days</option>
+          </select>
+          <button class="btn btn-primary">Add</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="search-box">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" x-model="search.subjects" placeholder="Search subjects…">
+    </div>
+
+    <div class="ledger-wrap overflow-x-auto">
+      <table class="ledger-table">
+        <thead><tr><th>Code</th><th>Descriptive Title</th><th>Units</th><th>Department</th><th></th></tr></thead>
+        <tbody>
+          <template x-for="grp in groupedSubjects(search.subjects)" :key="grp.key">
+            <template x-for="sub in grp.subjects" :key="sub.id">
+              <tr>
+                <td class="font-semibold whitespace-nowrap" x-text="sub.subject_code || '—'"></td>
+                <td><div class="clamp2" :title="sub.subject_name" x-text="sub.subject_name"></div><div class="text-xs font-semibold mt-0.5" style="color:var(--forest)" x-show="sittingTag(sub)" x-text="sittingTag(sub)"></div></td>
+                <td x-text="sub.units"></td>
+                <td><span class="badge badge-ghost" x-text="sub.department_name || 'Common / Gen Ed'"></span></td>
+                <td class="whitespace-nowrap text-right"><button class="btn btn-sm btn-ghost" @click="openEditor('subject', sub)">Edit</button><button class="btn btn-sm btn-ghost text-error" @click="requestDelete('subject', sub)">Delete</button></td>
+              </tr>
+            </template>
+          </template>
+          <tr x-show="subjects.length === 0"><td colspan="5" class="text-center text-base-content/50">No subjects yet.</td></tr>
+          <tr x-show="subjects.length > 0 && groupedSubjects(search.subjects).length === 0"><td colspan="5" class="text-center text-base-content/50">No subjects match your search.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ROOMS TAB -->
+  <div x-show="tab === 'rooms'">
+    <div class="tab-head">
+      <div><h2 class="section-heading" x-text="stepOf('rooms').label"></h2><div class="section-sub" x-text="stepOf('rooms').line"></div></div>
+      <div class="flex gap-2 flex-wrap">
+        <button class="btn btn-primary btn-sm" x-show="!(adding.rooms || rooms.length === 0)" @click="adding.rooms = true" x-text="stepOf('rooms').addLabel"></button>
+        <button class="btn btn-ghost btn-sm" @click="openBulk('rooms')">Paste a list</button>
+        <button class="btn btn-ghost btn-sm" x-show="stepDone('rooms') && nextStepAfter('rooms')" @click="tab = nextStepAfter('rooms').tab" x-text="'Next: ' + (nextStepAfter('rooms')?.label) + ' →'"></button>
+      </div>
+    </div>
+    <div class="panel mb-8" x-show="adding.rooms || rooms.length === 0">
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center justify-between"><h2 class="section-heading">Add Room</h2><button type="button" class="btn btn-ghost btn-xs" x-show="rooms.length > 0" @click="adding.rooms = false">Close</button></div>
+        <div x-show="errors.rooms" x-text="errors.rooms" class="alert alert-error text-sm py-2"></div>
+        <form @submit.prevent="addRoom" class="flex gap-2 flex-wrap">
+          <input x-model="newRoom.room_name" type="text" placeholder="e.g. Room 301" class="input input-bordered flex-1 min-w-[200px]" required>
+          <button class="btn btn-primary">Add</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="search-box">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" x-model="search.rooms" placeholder="Search rooms…">
+    </div>
+
+    <div class="ledger-wrap overflow-x-auto">
+      <table class="ledger-table">
+        <thead><tr><th>Room</th><th></th></tr></thead>
+        <tbody>
+          <template x-for="r in filterList(rooms, search.rooms, ['room_name'])" :key="r.id">
+            <tr>
+              <td x-text="r.room_name"></td>
+              <td class="whitespace-nowrap text-right"><button class="btn btn-sm btn-ghost" @click="openEditor('room', r)">Edit</button><button class="btn btn-sm btn-ghost text-error" @click="requestDelete('room', r)">Delete</button></td>
+            </tr>
+          </template>
+          <tr x-show="rooms.length === 0"><td colspan="2" class="text-center text-base-content/50">No rooms yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PATTERNS TAB -->
+  <div x-show="tab === 'patterns'">
+    <div class="tab-head">
+      <div><h2 class="section-heading" x-text="stepOf('patterns').label"></h2><div class="section-sub" x-text="stepOf('patterns').line"></div></div>
+      <div class="flex gap-2 flex-wrap">
+        <button class="btn btn-primary btn-sm" x-show="!(adding.patterns || patterns.length === 0)" @click="adding.patterns = true" x-text="stepOf('patterns').addLabel"></button>
+        <button class="btn btn-ghost btn-sm" x-show="stepDone('patterns') && nextStepAfter('patterns')" @click="tab = nextStepAfter('patterns').tab" x-text="'Next: ' + (nextStepAfter('patterns')?.label) + ' →'"></button>
+      </div>
+    </div>
+    <div class="panel mb-8" x-show="adding.patterns || patterns.length === 0">
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center justify-between"><h2 class="section-heading">Add Class Days</h2><button type="button" class="btn btn-ghost btn-xs" x-show="patterns.length > 0" @click="adding.patterns = false">Close</button></div>
+        <div x-show="errors.patterns" x-text="errors.patterns" class="alert alert-error text-sm py-2"></div>
+        <form @submit.prevent="addPattern" class="flex flex-col gap-2">
+          <input x-model="newPattern.name" type="text" placeholder="Pattern name, e.g. TTHS" class="input input-bordered max-w-xs" required>
+          <div class="flex flex-wrap gap-3">
+            <template x-for="d in [1,2,3,4,5,6,7]" :key="d">
+              <label class="label cursor-pointer gap-2 justify-start">
+                <input type="checkbox" :value="d" class="checkbox"
+                       :checked="newPattern.days.includes(d)"
+                       @change="toggleInArray(newPattern.days, d)">
+                <span class="label-text" x-text="dayLabels[d]"></span>
+              </label>
+            </template>
+          </div>
+          <button class="btn btn-primary w-fit">Add</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="search-box">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" x-model="search.patterns" placeholder="Search day-patterns…">
+    </div>
+
+    <div class="ledger-wrap overflow-x-auto">
+      <table class="ledger-table">
+        <thead><tr><th>Name</th><th>Days</th><th></th></tr></thead>
+        <tbody>
+          <template x-for="p in filterList(patterns, search.patterns, ['name'])" :key="p.id">
+            <tr>
+              <td x-text="p.name"></td>
+              <td x-text="dayNames(p.days)"></td>
+              <td>
+                <button class="btn btn-sm btn-ghost" @click="openPatternEditor(p)">Edit</button>
+                <button class="btn btn-sm btn-ghost text-error" @click="deletePattern(p.id)">Delete</button>
+              </td>
+            </tr>
+          </template>
+          <tr x-show="patterns.length === 0"><td colspan="3" class="text-center text-base-content/50">No day-patterns yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Inline pattern editor -->
+    <div x-show="editingPattern" class="panel mt-4">
+      <div class="flex flex-col gap-3">
+        <h2 class="section-heading">Edit Pattern</h2>
+        <input x-model="editingPatternName" type="text" class="input input-bordered max-w-xs mb-2">
+        <div class="flex flex-wrap gap-3">
+          <template x-for="d in [1,2,3,4,5,6,7]" :key="d">
+            <label class="label cursor-pointer gap-2 justify-start">
+              <input type="checkbox" :value="d" class="checkbox"
+                     :checked="editingPatternDays.includes(d)"
+                     @change="toggleInArray(editingPatternDays, d)">
+              <span class="label-text" x-text="dayLabels[d]"></span>
+            </label>
+          </template>
+        </div>
+        <div class="card-actions justify-end mt-2">
+          <button class="btn btn-ghost btn-sm" @click="editingPattern = null">Cancel</button>
+          <button class="btn btn-primary btn-sm" @click="savePattern">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ASSIGNMENTS TAB -->
+  <div x-show="tab === 'assignments'">
+    <div class="tab-head">
+      <div><h2 class="section-heading" x-text="stepOf('assignments').label"></h2><div class="section-sub" x-text="stepOf('assignments').line"></div></div>
+      <div class="seg" x-show="assignments.length > 0">
+        <button :class="scheduleView === 'list' ? 'on' : ''" @click="scheduleView = 'list'">List</button>
+        <button :class="scheduleView === 'week' ? 'on' : ''" @click="openWeek()">Weekly grid</button>
+      </div>
+    </div>
+    <div class="panel mb-8">
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <h2 class="section-heading">Build the schedule</h2>
+            <p class="text-sm text-base-content/60">Places every class that has no time yet.</p>
+          </div>
+          <button class="btn btn-secondary" @click="runAutoSchedule" :disabled="autoScheduling">
+            <span x-show="autoScheduling" class="loading loading-spinner loading-sm"></span>
+            Build schedule
+          </button>
+          <button class="btn btn-ghost btn-sm text-error" x-show="assignments.length > 0" @click="clearAll()">Clear all classes</button>
+        </div>
+
+        <div class="rules-box" style="margin-top:0.25rem">
+          <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <input type="checkbox" class="toggle toggle-sm" style="--tglbg:var(--forest)" :checked="oneSittingHours > 0" :disabled="sittingBusy" @change="saveOneSitting($event.target.checked ? 3 : 0)" aria-label="Keep long subjects in one sitting">
+            <span class="text-sm font-semibold">Keep</span>
+            <input type="number" step="0.5" min="1" max="8" class="input input-bordered input-sm w-20" :disabled="oneSittingHours <= 0 || sittingBusy" :value="oneSittingHours > 0 ? oneSittingHours : 3" @change="saveOneSitting($event.target.value)">
+            <span class="text-sm font-semibold">-hour subjects in one sitting</span>
+          </div>
+          <p class="text-xs text-base-content/60 mt-1" x-show="oneSittingHours > 0">Each one is placed as a single continuous block on one day (for example Tue 7:30–10:30), so the teacher never moves between rooms. If a block can't fit, that subject is split across days as before. Applies to classes built from now on; to redo existing ones, <em>Clear all classes</em> and build again. You can override any subject on the Subjects tab.</p>
+          <p class="text-xs text-base-content/60 mt-1" x-show="oneSittingHours <= 0">Off: every subject is split across its day-patterns (for example three 1-hour classes on Mon/Wed/Fri).</p>
+        </div>
+
+        <div x-show="autoScheduleSummary" class="mt-3">
+          <div class="alert" :class="autoScheduleSummary?.unassigned_count > 0 ? 'alert-warning' : 'alert-success'">
+            <span x-text="autoScheduleSummary ? `Assigned ${autoScheduleSummary.assigned_count}, could not place ${autoScheduleSummary.unassigned_count}.` : ''"></span>
+          </div>
+          <p class="text-sm mt-2" x-show="(autoScheduleSummary?.created_patterns || []).length" x-text="'Added single-day patterns for one-sitting subjects: ' + (autoScheduleSummary?.created_patterns || []).join(', ') + '.'"></p>
+          <ul class="text-sm mt-2 space-y-1" x-show="(autoScheduleSummary?.results || []).some(r => r.status === 'assigned' && r.note)">
+            <template x-for="(r, idx) in (autoScheduleSummary?.results || []).filter(r => r.status === 'assigned' && r.note)" :key="'n' + idx">
+              <li class="rounded px-2 py-1" style="background:rgba(31,107,65,.08)">
+                <span x-text="r.section + ' — ' + r.subject + ': ' + r.note"></span>
+              </li>
+            </template>
+          </ul>
+          <ul class="text-sm mt-2 space-y-1">
+            <template x-for="(r, idx) in (autoScheduleSummary?.results || []).filter(r => r.status === 'unassigned')" :key="idx">
+              <li class="text-warning-content bg-warning/10 rounded px-2 py-1">
+                <span x-text="r.section + ' — ' + r.subject + ': ' + r.reason"></span>
+              </li>
+            </template>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="mb-4" x-show="!adding.assignments">
+      <button class="btn btn-ghost btn-sm" @click="adding.assignments = true">+ Add a class by hand</button>
+    </div>
+    <div class="panel mb-8" x-show="adding.assignments">
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center justify-between"><h2 class="section-heading">Add a class by hand</h2><button type="button" class="btn btn-ghost btn-xs" @click="adding.assignments = false">Close</button></div>
+        <div x-show="errors.assignments" x-text="errors.assignments" class="alert alert-error text-sm py-2"></div>
+
+        <div x-show="instructors.length === 0 || sections.length === 0 || subjects.length === 0" class="alert alert-warning text-sm py-2">
+          Add at least one instructor, section, and subject before creating assignments.
+        </div>
+
+        <form @submit.prevent="addAssignment" class="grid grid-cols-2 md:grid-cols-3 gap-2">
+          <select x-model="newAssignment.instructor_id" class="select select-bordered" required>
+            <option value="" disabled selected>Instructor</option>
+            <template x-for="i in instructors" :key="i.id">
+              <option :value="i.id" x-text="i.name"></option>
+            </template>
+          </select>
+
+          <select x-model="newAssignment.subject_id" class="select select-bordered" required>
+            <option value="" disabled selected>Subject</option>
+            <template x-for="sub in subjects" :key="sub.id">
+              <option :value="sub.id" :title="subjectLabel(sub)" x-text="shortLabel(sub)"></option>
+            </template>
+          </select>
+
+          <select x-model="newAssignment.section_id" class="select select-bordered" required>
+            <option value="" disabled selected>Section</option>
+            <template x-for="s in sections" :key="s.id">
+              <option :value="s.id" x-text="s.section_name"></option>
+            </template>
+          </select>
+
+          <select x-model="newAssignment.pattern_id" class="select select-bordered" required>
+            <option value="" disabled selected>Days</option>
+            <template x-for="p in patterns" :key="p.id">
+              <option :value="p.id" x-text="p.name"></option>
+            </template>
+          </select>
+
+          <input x-model="newAssignment.start_time" type="time" class="input input-bordered" required>
+          <input x-model="newAssignment.end_time" type="time" class="input input-bordered" required>
+
+          <select x-model="newAssignment.room" class="select select-bordered">
+            <option value="" disabled selected>Room</option>
+            <template x-for="r in rooms" :key="r.id">
+              <option :value="r.room_name" x-text="r.room_name"></option>
+            </template>
+          </select>
+          <button class="btn btn-primary col-span-2 md:col-span-1">Add class</button>
+        </form>
+      </div>
+    </div>
+
+
+    <!-- Weekly grid: click a class to edit it. Overlaps show in red. -->
+    <div x-show="scheduleView === 'week' && assignments.length > 0">
+      <div class="toolbar">
+        <div class="seg">
+          <button :class="week.by === 'section' ? 'on' : ''" @click="setWeekBy('section')">Section</button>
+          <button :class="week.by === 'instructor' ? 'on' : ''" @click="setWeekBy('instructor')">Instructor</button>
+          <button :class="week.by === 'room' ? 'on' : ''" @click="setWeekBy('room')">Room</button>
+        </div>
+        <select class="select select-bordered select-sm" x-model="week.id">
+          <template x-for="c in weekChoices()" :key="c.id"><option :value="c.id" x-text="c.label"></option></template>
+        </select>
+        <span class="text-sm" style="color:var(--ink-soft)">Click a class to edit it</span>
+      </div>
+      <div class="wk-wrap">
+        <template x-for="wd in [weekData()]" :key="1">
+          <div class="wk" :style="'grid-template-columns:3.6rem repeat(' + wd.days.length + ', minmax(0,1fr))'">
+            <div class="wk-head"></div>
+            <template x-for="d in wd.days" :key="d"><div class="wk-head" x-text="dayLabels[d]"></div></template>
+            <div class="wk-time" :style="'height:' + wd.height + 'px'">
+              <template x-for="h in wd.hours" :key="h"><span :style="'top:' + ((h - wd.start) * HOUR_PX) + 'px'" x-text="to12h(String(h).padStart(2, '0') + ':00')"></span></template>
+            </div>
+            <template x-for="d in wd.days" :key="'c' + d">
+              <div class="wk-col" :style="'height:' + wd.height + 'px;background-size:100% ' + HOUR_PX + 'px'">
+                <template x-for="b in wd.blocks.filter(b => b.day === d)" :key="b.a.id + '-' + d">
+                  <button class="wk-block" :class="b.clash ? 'clash' : ''" :style="b.style" @click="openEditor('assignment', b.a)" :title="b.a.subject_name + ' — ' + b.a.section_name + ' — ' + b.a.instructor_name + ' — ' + b.a.room">
+                    <strong x-text="b.a.subject_code || b.a.subject_name"></strong><br>
+                    <span x-text="weekLine(b.a)"></span>
+                  </button>
+                </template>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+      <div class="text-sm mt-2" x-show="weekData().blocks.length === 0" style="color:var(--ink-soft)">Nothing scheduled for this one yet.</div>
+    </div>
+
+    <div x-show="scheduleView === 'list'">
+    <div class="search-box">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" x-model="search.assignments" placeholder="Search by section, subject, instructor, or room…">
+    </div>
+
+    <div class="ledger-wrap overflow-x-auto">
+      <table class="ledger-table">
+        <thead><tr><th>Section</th><th>Subject</th><th>Instructor</th><th>Days</th><th>Time</th><th>Room</th><th></th></tr></thead>
+        <tbody>
+          <template x-for="a in filterList(assignments, search.assignments, ['section_name', 'subject_name', 'instructor_name', 'room'])" :key="a.id">
+            <tr>
+              <td class="font-semibold whitespace-nowrap" x-text="a.section_name"></td>
+              <td>
+                <div class="font-semibold" x-text="a.subject_code || a.subject_name"></div>
+                <div class="cell-sub clamp2" x-show="a.subject_code" :title="a.subject_name" x-text="a.subject_name"></div>
+              </td>
+              <td x-text="a.instructor_name"></td>
+              <td x-text="a.pattern_name"></td>
+              <td x-text="formatTime(a.start_time) + ' – ' + formatTime(a.end_time)"></td>
+              <td x-text="a.room"></td>
+              <td class="whitespace-nowrap text-right"><button class="btn btn-sm btn-ghost" @click="openEditor('assignment', a)">Edit</button><button class="btn btn-sm btn-ghost text-error" @click="requestDelete('assignment', a)">Delete</button></td>
+            </tr>
+          </template>
+          <tr x-show="assignments.length === 0"><td colspan="7" class="text-center text-base-content/50">Nothing scheduled yet — press Build schedule.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    </div>
+  </div>
+
+  </main>
+</div>
+
+<script>
+function manage() {
+  const params = new URLSearchParams(window.location.search);
+  const scheduleId = params.get('id');
+
+  return {
+    scheduleId,
+    scheduleName: '',
+    publicViewUrl: '',
+    oneSittingHours: 3,
+    sittingBusy: false,
+    teacherViewUrl: '',
+    tab: 'guide',
+    guideOpen: false, guideStep: 0, helpOpen: false,
+    editor: { open: false, type: '', mode: 'edit', id: null, draft: { subject_ids: [], pattern_ids: [], window_start: '', window_end: '', break_start: '', break_end: '' }, info: '', error: '', saving: false },
+    bulk: { open: false, type: '', text: '', error: '', busy: false },
+    toast: { msg: '', canUndo: false, timer: null }, _undo: null,
+    secFilter: { kind: 'all', dept: 'all' }, collapsed: {},
+    scheduleView: 'list', week: { by: 'section', id: '' }, HOUR_PX: 52,
+    adding: { departments: false, instructors: false, sections: false, subjects: false, rooms: false, patterns: false, assignments: false },
+    departments: [], instructors: [], sections: [], subjects: [], patterns: [], assignments: [], rooms: [],
+    newDepartment: { name: '' },
+    newInstructor: { name: '', employment_type: 'full-time', max_teaching_hours: 6.0, subject_ids: [] },
+    newSection: { section_name: '', department_id: null, program: '', year_level: '', subject_ids: [], pattern_ids: [], window_start: '', window_end: '', break_start: '', break_end: '' },
+    newSubject: { subject_code: '', subject_name: '', units: 3.0, department_id: null, sitting_mode: 'auto' },
+    newRoom: { room_name: '' },
+    newAssignment: { instructor_id: '', subject_id: '', section_id: '', pattern_id: '', start_time: '', end_time: '', room: '' },
+    newPattern: { name: '', days: [] },
+    errors: { rules: '', departments: '', instructors: '', sections: '', subjects: '', assignments: '', rooms: '', patterns: '' },
+    search: {
+      editorSubjects: '', departments: '', instructors: '', sections: '', subjects: '', rooms: '', patterns: '', assignments: '',
+      newInstructorSubjects: '', editInstructorSubjects: '', newSectionSubjects: '', editSectionSubjects: ''
+    },
+
+    editingPattern: null, editingPatternDays: [], editingPatternName: '',
+    autoScheduling: false, autoScheduleSummary: null,
+
+
+    // ---- Getting-started checklist + guided tour ----
+    workflow: [
+      { n: 1, tab: 'patterns', icon: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>', label: 'Class Days', line: 'Which days classes meet, like Mon-Wed-Fri.', addLabel: '+ Add class days' },
+      { n: 2, tab: 'rooms', icon: '<path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/>', label: 'Rooms', line: 'Where classes can be held.', addLabel: '+ Add room' },
+      { n: 3, tab: 'departments', icon: '<path d="M12 2l10 5-10 5L2 7l10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>', label: 'Departments', line: 'Groups like IT or Education.', addLabel: '+ Add department', optional: true },
+      { n: 4, tab: 'subjects', icon: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>', label: 'Subjects', line: 'Every subject and its units.', addLabel: '+ Add subject' },
+      { n: 5, tab: 'instructors', icon: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>', label: 'Instructors', line: 'Teachers and what each can teach.', addLabel: '+ Add instructor' },
+      { n: 6, tab: 'sections', icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>', label: 'Sections', line: 'Student groups like BSIT-1A.', addLabel: '+ Add section' },
+      { n: 7, tab: 'assignments', icon: '<path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>', label: 'Schedule', line: 'Build it in one click, then adjust.', addLabel: '' }
+    ],
+    stepOf(tab) { return this.workflow.find(w => w.tab === tab) || {}; },
+    ruleKind(m) {
+      if (!m || !m.window_start) return 'custom';
+      return parseInt(m.window_start, 10) >= 12 ? 'night' : 'day';
+    },
+    currentStep() { return this.workflow.find(w => w.tab === this.tab); },
+    nextStepAfter(tab) { const i = this.workflow.findIndex(w => w.tab === tab); return i >= 0 ? this.workflow[i + 1] : null; },
+    stepCount(tab) {
+      return ({ patterns: this.patterns, rooms: this.rooms, departments: this.departments, subjects: this.subjects,
+                instructors: this.instructors, sections: this.sections, assignments: this.assignments }[tab] || []).length;
+    },
+    stepDone(tab) { return this.stepCount(tab) > 0; },
+    stepStatus(tab) {
+      const n = this.stepCount(tab);
+      if (tab === 'instructors' && n) {
+        const q = this.instructors.filter(i => (i.subject_ids || []).length).length;
+        return `${n} added · ${q} with subjects ticked` + (q < n ? ' (tick subjects for the rest)' : '');
+      }
+      if (tab === 'sections' && n) {
+        const c = this.sections.filter(s => (s.subject_ids || []).length).length;
+        return `${n} added · ${c} with a curriculum` + (c < n ? ' (add subjects to the rest)' : '');
+      }
+      return n ? `${n} added` : 'Nothing added yet';
+    },
+    firstTodo() { return this.workflow.find(w => !w.optional && !this.stepDone(w.tab)); },
+    doneCount() { return this.workflow.filter(w => !w.optional && this.stepDone(w.tab)).length; },
+
+    tourSteps() {
+      return [
+        { tab: 'guide', title: 'Welcome', body: 'Set up your school in order, from the menu on the left. Each step turns green when it has data.' },
+        { tab: 'patterns', title: 'Add with the green button', body: 'On every page, press the green + button to add something. The form closes when you are done.' },
+        { tab: 'assignments', title: 'Build the schedule', body: 'When the steps are green, press Build schedule. Anything it cannot place is listed with the reason.' },
+        { tab: 'guide', title: 'Share it', body: 'Open "Student view" in the menu and send that link to students. They do not need an account.' }
+      ];
+    },
+    startTour() { this.guideStep = 0; this.guideOpen = true; this.tab = this.tourSteps()[0].tab; },
+    goTour(i) { this.guideStep = i; this.tab = this.tourSteps()[i].tab; },
+    endTour() {
+      this.guideOpen = false;
+      try { localStorage.setItem('sm_tour_done', '1'); } catch (e) {}
+    },
+
+    dayLabels: { 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun' },
+
+
+    // ================= Edit window (every kind of item) =================
+    apiOf: { department: 'departments', room: 'rooms', subject: 'subjects', instructor: 'instructors', section: 'sections', assignment: 'class_assignments' },
+    nounOf: { department: 'department', room: 'room', subject: 'subject', instructor: 'instructor', section: 'section', assignment: 'class' },
+    async call(method, url, body) {
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+      let data = {}; try { data = await res.json(); } catch (e) {}
+      return { ok: res.ok, data };
+    },
+    editorTitle() {
+      const n = this.nounOf[this.editor.type] || '';
+      if (this.editor.mode === 'duplicate') return 'Duplicate section';
+      return 'Edit ' + n;
+    },
+    draftFrom(type, item) {
+      return { subject_ids: [], pattern_ids: [], window_start: '', window_end: '', break_start: '', break_end: '', ...this.draftCore(type, item) };
+    },
+    draftCore(type, item) {
+      const hm = t => (t || '').slice(0, 5);
+      if (type === 'department') return { name: item.name };
+      if (type === 'room') return { room_name: item.room_name };
+      if (type === 'subject') return { subject_code: item.subject_code || '', subject_name: item.subject_name, units: Number(item.units), department_id: item.department_id || null, sitting_mode: item.sitting_mode || 'auto' };
+      if (type === 'instructor') return { name: item.name, employment_type: item.employment_type, max_teaching_hours: Number(item.max_teaching_hours), subject_ids: [...(item.subject_ids || [])] };
+      if (type === 'section') return { section_name: item.section_name, department_id: item.department_id || null, program: item.program || '', year_level: item.year_level || '',
+        subject_ids: [...(item.subject_ids || [])], pattern_ids: [...(item.pattern_ids || [])], window_start: hm(item.window_start), window_end: hm(item.window_end), break_start: hm(item.break_start), break_end: hm(item.break_end) };
+      return { instructor_id: item.instructor_id, subject_id: item.subject_id, pattern_id: item.pattern_id, start_time: hm(item.start_time), end_time: hm(item.end_time), room: item.room };
+    },
+    openEditor(type, item) {
+      this.editor = { open: true, type, mode: 'edit', id: item.id, draft: this.draftFrom(type, item), error: '', saving: false,
+        info: type === 'assignment' ? `${item.section_name} · ${item.subject_code ? item.subject_code + ' — ' : ''}${item.subject_name}` : '' };
+      this.search.editorSubjects = '';
+    },
+    openDuplicate(sec) {
+      const draft = this.draftFrom('section', sec);
+      draft.section_name = this.suggestSectionName(sec.section_name);
+      this.editor = { open: true, type: 'section', mode: 'duplicate', id: null, draft, error: '', saving: false, info: '' };
+      this.search.editorSubjects = '';
+    },
+    closeEditor() { this.editor.open = false; },
+    applyEditorPreset(kind) { Object.assign(this.editor.draft, this.presetValues(kind)); },
+
+    // ---- unique section names (also enforced by the server) ----
+    nameTaken(name, exceptId = null) {
+      const n = (name || '').trim().toLowerCase();
+      return n !== '' && this.sections.some(s => s.id !== exceptId && s.section_name.trim().toLowerCase() === n);
+    },
+    nextName(name) {
+      let m = name.match(/^(.*\d)([A-Za-z])$/);
+      if (m && m[2].toUpperCase() !== 'Z') {
+        const c = m[2], next = String.fromCharCode(c.charCodeAt(0) + 1);
+        return m[1] + next;
+      }
+      m = name.match(/^(.*?)(\d+)$/);
+      if (m) return m[1] + (parseInt(m[2], 10) + 1);
+      return name + ' (copy)';
+    },
+    suggestSectionName(name) {
+      let candidate = this.nextName(name.trim());
+      for (let i = 0; i < 60 && this.nameTaken(candidate); i++) candidate = this.nextName(candidate);
+      return candidate;
+    },
+
+    async saveEditor() {
+      const e = this.editor;
+      e.error = ''; e.saving = true;
+      let r;
+      const url = '../api/' + this.apiOf[e.type] + '.php';
+      if (e.mode === 'duplicate') r = await this.call('POST', url, { schedule_id: this.scheduleId, ...e.draft });
+      else r = await this.call('PUT', url, { id: e.id, ...e.draft });
+      e.saving = false;
+      if (!r.ok) { e.error = r.data.error || 'Could not save.'; return; }
+      const type = e.type, wasDup = e.mode === 'duplicate';
+      this.closeEditor();
+      await this.reloadFor(type);
+      this.showToast(wasDup ? 'Section copied.' : 'Saved.');
+    },
+    async deleteEditedClass() {
+      const a = this.assignments.find(x => x.id === this.editor.id);
+      this.closeEditor();
+      if (a) await this.requestDelete('assignment', a);
+    },
+    async reloadFor(type) {
+      const jobs = {
+        department: [this.loadDepartments, this.loadSubjects, this.loadSections],
+        room: [this.loadRooms, this.loadAssignments],
+        subject: [this.loadSubjects, this.loadInstructors, this.loadSections, this.loadAssignments],
+        instructor: [this.loadInstructors, this.loadAssignments],
+        section: [this.loadSections, this.loadAssignments],
+        assignment: [this.loadAssignments]
+      }[type] || [];
+      await Promise.all(jobs.map(f => f.call(this)));
+    },
+
+    // ================= Safer deleting + Undo =================
+    showToast(msg, undo = null) {
+      clearTimeout(this.toast.timer);
+      this.toast.msg = msg; this.toast.canUndo = !!undo; this._undo = undo;
+      this.toast.timer = setTimeout(() => { this.toast.msg = ''; this.toast.canUndo = false; this._undo = null; }, undo ? 9000 : 2500);
+    },
+    async undoToast() {
+      const fn = this._undo;
+      this.toast.msg = ''; this.toast.canUndo = false; this._undo = null; clearTimeout(this.toast.timer);
+      if (fn) await fn();
+    },
+    labelOf(type, item) {
+      return { department: item.name, room: item.room_name, subject: item.subject_code || item.subject_name, instructor: item.name,
+               section: item.section_name, assignment: (item.subject_code || item.subject_name) + ' for ' + item.section_name }[type];
+    },
+    // What would be lost along with this item? (classes, links)
+    dependents(type, item) {
+      const A = this.assignments, parts = [];
+      if (type === 'instructor') { const n = A.filter(a => a.instructor_id === item.id).length; if (n) parts.push(n + ' scheduled class' + (n > 1 ? 'es' : '')); }
+      if (type === 'section') { const n = A.filter(a => a.section_id === item.id).length; if (n) parts.push(n + ' scheduled class' + (n > 1 ? 'es' : '')); }
+      if (type === 'subject') {
+        const n = A.filter(a => a.subject_id === item.id).length, sc = this.sections.filter(s => (s.subject_ids || []).includes(item.id)).length, ins = this.instructors.filter(i => (i.subject_ids || []).includes(item.id)).length;
+        if (n) parts.push(n + ' scheduled class' + (n > 1 ? 'es' : ''));
+        if (sc) parts.push('its place in ' + sc + ' section' + (sc > 1 ? 's' : ''));
+        if (ins) parts.push('its link to ' + ins + ' instructor' + (ins > 1 ? 's' : ''));
+      }
+      if (type === 'room') { const n = A.filter(a => a.room === item.room_name).length; if (n) parts.push(n + ' class' + (n > 1 ? 'es' : '') + ' still use this room name'); }
+      if (type === 'department') {
+        const n = this.subjects.filter(x => x.department_id === item.id).length + this.sections.filter(x => x.department_id === item.id).length;
+        if (n) parts.push(n + ' subject/section' + (n > 1 ? 's' : '') + ' that would become "General"');
+      }
+      return parts;
+    },
+    createPayload(type, item) {
+      const base = { schedule_id: this.scheduleId };
+      if (type === 'department') return { ...base, name: item.name };
+      if (type === 'room') return { ...base, room_name: item.room_name };
+      if (type === 'subject') return { ...base, subject_code: item.subject_code, subject_name: item.subject_name, units: item.units, department_id: item.department_id, sitting_mode: item.sitting_mode || 'auto' };
+      if (type === 'instructor') return { ...base, name: item.name, employment_type: item.employment_type, max_teaching_hours: item.max_teaching_hours, subject_ids: item.subject_ids || [] };
+      if (type === 'section') return { ...base, ...this.draftFrom('section', item) };
+      return { ...base, instructor_id: item.instructor_id, subject_id: item.subject_id, section_id: item.section_id, pattern_id: item.pattern_id,
+               start_time: (item.start_time || '').slice(0, 5), end_time: (item.end_time || '').slice(0, 5), room: item.room };
+    },
+    async requestDelete(type, item) {
+      const deps = this.dependents(type, item);
+      if (deps.length && !confirm(`Delete "${this.labelOf(type, item)}"?\n\nThis also removes: ${deps.join(', ')}.\nThis cannot be undone.`)) return;
+      const del = await fetch('../api/' + this.apiOf[type] + '.php', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: `id=${item.id}`
+      });
+      if (!del.ok) { this.showToast('Could not delete.'); return; }
+      await this.reloadFor(type);
+      const snapshot = JSON.parse(JSON.stringify(item));
+      // Anything that took other things with it can't be restored, so only offer Undo when nothing depended on it.
+      const undo = deps.length ? null : async () => {
+        const r = await this.call('POST', '../api/' + this.apiOf[type] + '.php', this.createPayload(type, snapshot));
+        await this.reloadFor(type);
+        this.showToast(r.ok ? 'Restored.' : (r.data.error || 'Could not restore.'));
+      };
+      this.showToast(`Deleted "${this.labelOf(type, snapshot)}".`, undo);
+    },
+    async clearAll() {
+      const list = JSON.parse(JSON.stringify(this.assignments));
+      if (!list.length) return;
+      if (!confirm(`Delete all ${list.length} scheduled classes so you can build again?\nYou can undo this right after.`)) return;
+      const res = await fetch('../api/class_assignments.php', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: `all=1&schedule_id=${this.scheduleId}`
+      });
+      if (!res.ok) { this.showToast('Could not clear.'); return; }
+      this.autoScheduleSummary = null;
+      await this.loadAssignments();
+      this.showToast(`Cleared ${list.length} classes.`, async () => {
+        let ok = 0;
+        for (const a of list) { const r = await this.call('POST', '../api/class_assignments.php', this.createPayload('assignment', a)); if (r.ok) ok++; }
+        await this.loadAssignments();
+        this.showToast(`Restored ${ok} of ${list.length} classes.`);
+      });
+    },
+
+    // ================= Sections list =================
+    kindOf(s) { if (!s.window_start) return 'any'; return parseInt(s.window_start, 10) >= 12 ? 'night' : 'day'; },
+    sectionProgress(s) {
+      const ids = s.subject_ids || [];
+      const have = new Set(this.assignments.filter(a => a.section_id === s.id).map(a => a.subject_id));
+      return { total: ids.length, done: ids.filter(id => have.has(id)).length };
+    },
+    yearRank(y) { const m = (y || '').match(/\d/); return m ? parseInt(m[0], 10) : 99; },
+    groupedSections() {
+      const q = (this.search.sections || '').trim().toLowerCase(), f = this.secFilter;
+      const list = this.sections.filter(s => {
+        if (f.kind === 'day' && this.kindOf(s) === 'night') return false;
+        if (f.kind === 'night' && this.kindOf(s) !== 'night') return false;
+        if (f.dept === 'none' && s.department_id) return false;
+        if (f.dept !== 'all' && f.dept !== 'none' && String(s.department_id) !== f.dept) return false;
+        return !q || [s.section_name, s.program, s.year_level, s.department_name].some(v => (v || '').toLowerCase().includes(q));
+      });
+      const groups = {};
+      for (const s of list) {
+        const dept = s.department_name || 'General', year = s.year_level || 'No year';
+        const key = dept + '|' + year;
+        (groups[key] = groups[key] || { key, dept, year, sections: [] }).sections.push(s);
+      }
+      const out = Object.values(groups);
+      out.forEach(g => { g.label = g.dept + ' · ' + g.year; g.sections.sort((a, b) => a.section_name.localeCompare(b.section_name, undefined, { numeric: true })); });
+      out.sort((a, b) => (a.dept === 'General') - (b.dept === 'General') || a.dept.localeCompare(b.dept) || this.yearRank(a.year) - this.yearRank(b.year) || a.year.localeCompare(b.year));
+      return out;
+    },
+
+    // ================= Paste a list =================
+    bulkNoun() { return { departments: 'departments', rooms: 'rooms', subjects: 'subjects', instructors: 'instructors' }[this.bulk.type] || ''; },
+    bulkHint() {
+      return { departments: 'One department per line.', rooms: 'One room per line.',
+               subjects: 'One subject per line: code, title, units (units is optional, default 3).',
+               instructors: 'One instructor per line: name, full-time or part-time, max hours (the last two are optional).' }[this.bulk.type] || '';
+    },
+    bulkExample() {
+      return { departments: 'IT Department\nEducation Department', rooms: 'Room 101\nRoom 102\nComputer Lab 1',
+               subjects: 'IT 101, Introduction to Computing, 3\nGE 104, Purposive Communication, 3',
+               instructors: 'Maria Santos\nJose Reyes, part-time, 12' }[this.bulk.type] || '';
+    },
+    openBulk(type) { this.bulk = { open: true, type, text: '', error: '', busy: false }; },
+    bulkLines() { return (this.bulk.text || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean); },
+    parseBulkLine(type, line) {
+      const parts = line.split(/\t|,/).map(p => p.trim());
+      if (type === 'departments') return { name: line };
+      if (type === 'rooms') return { room_name: line };
+      if (type === 'subjects') {
+        if (parts.length === 1) return { subject_code: '', subject_name: parts[0], units: 3 };
+        const last = parseFloat(parts[parts.length - 1]);
+        const hasUnits = parts.length >= 3 && !isNaN(last);
+        const title = hasUnits ? parts.slice(1, -1).join(', ') : parts.slice(1).join(', ');
+        return { subject_code: parts[0], subject_name: title, units: hasUnits ? last : 3 };
+      }
+      const type2 = (parts[1] || '').toLowerCase().startsWith('part') ? 'part-time' : 'full-time';
+      const hrs = parseFloat(parts[2]);
+      return { name: parts[0], employment_type: type2, max_teaching_hours: !isNaN(hrs) && hrs > 0 ? hrs : (type2 === 'part-time' ? 12 : 6), subject_ids: [] };
+    },
+    async runBulk() {
+      const b = this.bulk; b.error = ''; b.busy = true;
+      const existing = {
+        departments: this.departments.map(x => x.name), rooms: this.rooms.map(x => x.room_name),
+        subjects: this.subjects.map(x => x.subject_code).filter(Boolean), instructors: this.instructors.map(x => x.name)
+      }[b.type].map(x => x.trim().toLowerCase());
+      const keyOf = o => (b.type === 'departments' ? o.name : b.type === 'rooms' ? o.room_name : b.type === 'subjects' ? o.subject_code : o.name || '').trim().toLowerCase();
+      let added = 0, skipped = 0; const failed = [];
+      for (const line of this.bulkLines()) {
+        const item = this.parseBulkLine(b.type, line), key = keyOf(item);
+        if (key && existing.includes(key)) { skipped++; continue; }
+        const r = await this.call('POST', '../api/' + b.type + '.php', { schedule_id: this.scheduleId, ...item });
+        if (r.ok) { added++; if (key) existing.push(key); } else failed.push(line + ' — ' + (r.data.error || 'failed'));
+      }
+      b.busy = false;
+      const loader = { departments: this.loadDepartments, rooms: this.loadRooms, subjects: this.loadSubjects, instructors: this.loadInstructors }[b.type];
+      await loader.call(this);
+      if (failed.length) { b.error = `Added ${added}. ${failed.length} failed: ` + failed.slice(0, 3).join('; '); return; }
+      b.open = false;
+      this.showToast(`Added ${added}.` + (skipped ? ` Skipped ${skipped} that already exist.` : ''));
+    },
+
+    // ================= Weekly grid =================
+    openWeek() { this.scheduleView = 'week'; this.ensureWeekChoice(); },
+    setWeekBy(by) { this.week.by = by; this.week.id = ''; this.ensureWeekChoice(); },
+    weekChoices() {
+      const by = this.week.by;
+      if (by === 'section') return this.sections.map(s => ({ id: String(s.id), label: s.section_name }));
+      if (by === 'instructor') return this.instructors.map(i => ({ id: String(i.id), label: i.name }));
+      return this.rooms.map(r => ({ id: r.room_name, label: r.room_name }));
+    },
+    ensureWeekChoice() {
+      const c = this.weekChoices();
+      if (!c.some(x => x.id === String(this.week.id))) this.week.id = c.length ? c[0].id : '';
+    },
+    weekLine(a) {
+      return this.week.by === 'section' ? a.instructor_name + ' · ' + a.room : this.week.by === 'instructor' ? a.section_name + ' · ' + a.room : a.section_name + ' · ' + a.instructor_name;
+    },
+    weekData() {
+      const by = this.week.by, id = String(this.week.id), toMin = t => { const [h, m] = (t || '0:0').split(':'); return parseInt(h, 10) * 60 + parseInt(m, 10); };
+      const mine = this.assignments.filter(a => by === 'section' ? String(a.section_id) === id : by === 'instructor' ? String(a.instructor_id) === id : a.room === id);
+      const blocks = [];
+      for (const a of mine) {
+        const p = this.patterns.find(x => x.id === a.pattern_id);
+        for (const d of (p ? p.days : [])) blocks.push({ a, day: d, s: toMin(a.start_time), e: toMin(a.end_time) });
+      }
+      const days = [1, 2, 3, 4, 5, 6]; if (blocks.some(b => b.day === 7)) days.push(7);
+      const start = Math.min(7, ...blocks.map(b => Math.floor(b.s / 60))), end = Math.max(18, ...blocks.map(b => Math.ceil(b.e / 60)));
+      const H = this.HOUR_PX;
+      // lay out overlapping classes side by side, and mark clashes
+      for (const d of days) {
+        const col = blocks.filter(b => b.day === d).sort((x, y) => x.s - y.s || x.e - y.e);
+        let cluster = [], clusterEnd = 0; const clusters = [];
+        for (const b of col) {
+          if (cluster.length && b.s >= clusterEnd) { clusters.push(cluster); cluster = []; clusterEnd = 0; }
+          cluster.push(b); clusterEnd = Math.max(clusterEnd, b.e);
+        }
+        if (cluster.length) clusters.push(cluster);
+        for (const c of clusters) {
+          const lanes = [];
+          for (const b of c) {
+            let i = lanes.findIndex(end => end <= b.s); if (i < 0) { i = lanes.length; lanes.push(0); }
+            lanes[i] = b.e; b.lane = i;
+          }
+          for (const b of c) { b.lanes = lanes.length; b.clash = c.length > 1; }
+        }
+      }
+      for (const b of blocks) {
+        const hue = ((b.a.subject_id || 1) * 47) % 360;
+        b.style = `top:${(b.s - start * 60) / 60 * H}px;height:${Math.max(18, (b.e - b.s) / 60 * H - 2)}px;left:${b.lane / b.lanes * 100}%;width:calc(${100 / b.lanes}% - 3px);background:hsl(${hue} 55% 90%);border-left-color:hsl(${hue} 50% 38%);`;
+      }
+      const hours = []; for (let h = start; h <= end; h++) hours.push(h);
+      return { days, blocks, start, end, hours, height: (end - start) * H };
+    },
+
+    async init() {
+      if (!this.scheduleId) { window.location.href = 'dashboard.html'; return; }
+
+      // Phone: when the step changes, slide the tab strip so the active tab is in view,
+      // and bring the new page back to the top.
+      this.$watch('tab', () => this.$nextTick(() => {
+        if (window.innerWidth > 900) return;
+        const el = document.querySelector('.side-nav .side-item.active');
+        if (el) el.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+        const nav = document.querySelector('.side-nav');
+        if (nav && nav.getBoundingClientRect().top <= 1) window.scrollTo({ top: Math.max(0, nav.offsetTop - 1), behavior: 'smooth' });
+      }));
+
+      // Confirm session
+      const meRes = await fetch('../api/me.php');
+      if (!meRes.ok) { window.location.href = 'login.html'; return; }
+
+      await Promise.all([
+        this.loadScheduleInfo(), this.loadDepartments(),
+        this.loadInstructors(), this.loadSections(), this.loadSubjects(),
+        this.loadPatterns(), this.loadAssignments(), this.loadRooms()
+      ]);
+      this.applyPreset('day');
+      this.ensureWeekChoice();
+      // Keep an add-form open after the first item is added, so several can be entered in a row
+      ['departments', 'instructors', 'sections', 'subjects', 'rooms', 'patterns'].forEach(k => {
+        this.$watch(k + '.length', (n, o) => { if (o === 0 && n > 0) this.adding[k] = true; });
+      });
+      // First visit on this browser: offer the tour
+      try { if (!localStorage.getItem('sm_tour_done') && this.doneCount() === 0) this.startTour(); } catch (e) {}
+    },
+
+    async loadDepartments() {
+      const res = await fetch(`../api/departments.php?schedule_id=${this.scheduleId}`);
+      const data = await res.json();
+      this.departments = data.departments || [];
+    },
+    async addDepartment() {
+      this.errors.departments = '';
+      const res = await fetch('../api/departments.php', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schedule_id: this.scheduleId, ...this.newDepartment })
+      });
+      const data = await res.json();
+      if (!res.ok) { this.errors.departments = data.error; return; }
+      this.newDepartment = { name: '' };
+      await this.loadDepartments();
+    },
+
+    // Groups the subjects list by department for checklists/tables: each
+    // department's subjects, plus a trailing "Common / General Education"
+    // group for subjects with no department_id. Instructors are allowed
+    // to be qualified across multiple groups -- this only affects how
+    // subjects are displayed, not which ones can be picked. Pass a search
+    // term to filter by code or title first (e.g. typing "IM 4" while
+    // building a section's curriculum, instead of scanning every subject).
+    groupedSubjects(query) {
+      let pool = this.subjects;
+      if (query && query.trim()) {
+        const q = query.trim().toLowerCase();
+        pool = pool.filter(s =>
+          (s.subject_code || '').toLowerCase().includes(q) ||
+          (s.subject_name || '').toLowerCase().includes(q)
+        );
+      }
+      const groups = this.departments.map(d => ({
+        key: 'dept-' + d.id,
+        label: d.name,
+        subjects: pool.filter(s => s.department_id === d.id)
+      })).filter(g => g.subjects.length > 0);
+      const common = pool.filter(s => !s.department_id);
+      if (common.length > 0) {
+        groups.push({ key: 'common', label: 'Common / General Education', subjects: common });
+      }
+      return groups;
+    },
+
+    // Generic case-insensitive filter for the plain list tables (Departments,
+    // Instructors, Sections, Rooms, Patterns, Assignments). `fields` is a
+    // list of property names to search across for each item.
+    filterList(list, query, fields) {
+      if (!query || !query.trim()) return list;
+      const q = query.trim().toLowerCase();
+      return list.filter(item => fields.some(f => (item[f] || '').toString().toLowerCase().includes(q)));
+    },
+
+    async loadScheduleInfo() {
+      const res = await fetch(`../api/list_schedules.php?id=${this.scheduleId}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      this.scheduleName = data.schedule.school_name;
+      this.publicViewUrl = window.location.origin +
+        window.location.pathname.replace('views/schedule.html', 'public/view.php?s=' + data.schedule.public_slug);
+      this.teacherViewUrl = this.publicViewUrl.replace('public/view.php', 'public/teacher.php');
+      this.oneSittingHours = Number(data.schedule.one_sitting_hours ?? 3);
+    },
+
+    dayNames(days) {
+      return (days || []).slice().sort((a, b) => a - b).map(d => this.dayLabels[d]).join('/');
+    },
+
+    async addPattern() {
+      this.errors.patterns = '';
+      if (this.newPattern.days.length === 0) { this.errors.patterns = 'Select at least one day.'; return; }
+      const res = await fetch('../api/patterns.php', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schedule_id: this.scheduleId, ...this.newPattern })
+      });
+      const data = await res.json();
+      if (!res.ok) { this.errors.patterns = data.error; return; }
+      this.newPattern = { name: '', days: [] };
+      await this.loadPatterns();
+    },
+
+    openPatternEditor(pattern) {
+      this.editingPattern = pattern;
+      this.editingPatternName = pattern.name;
+      this.editingPatternDays = [...(pattern.days || [])];
+    },
+    async savePattern() {
+      this.errors.patterns = '';
+      if (this.editingPatternDays.length === 0) { this.errors.patterns = 'Select at least one day.'; return; }
+      const res = await fetch('../api/patterns.php', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: this.editingPattern.id, name: this.editingPatternName, days: this.editingPatternDays })
+      });
+      const data = await res.json();
+      if (!res.ok) { this.errors.patterns = data.error; return; }
+      this.editingPattern = null;
+      await this.loadPatterns();
+    },
+    async deletePattern(id) {
+      if (!confirm('Delete this day-pattern? (Only works if no assignments use it.)')) return;
+      const res = await fetch('../api/patterns.php', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `id=${id}`
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error); return; }
+      await this.loadPatterns();
+    },
+
+    async loadInstructors() {
+      const res = await fetch(`../api/instructors.php?schedule_id=${this.scheduleId}`);
+      const data = await res.json();
+      this.instructors = data.instructors || [];
+    },
+    async loadSections() {
+      const res = await fetch(`../api/sections.php?schedule_id=${this.scheduleId}`);
+      const data = await res.json();
+      this.sections = data.sections || [];
+    },
+    async loadSubjects() {
+      const res = await fetch(`../api/subjects.php?schedule_id=${this.scheduleId}`);
+      const data = await res.json();
+      this.subjects = data.subjects || [];
+    },
+    async loadPatterns() {
+      const res = await fetch(`../api/patterns.php?schedule_id=${this.scheduleId}`);
+      const data = await res.json();
+      this.patterns = data.patterns || [];
+    },
+    async loadAssignments() {
+      const res = await fetch(`../api/class_assignments.php?schedule_id=${this.scheduleId}`);
+      const data = await res.json();
+      this.assignments = data.assignments || [];
+    },
+    async loadRooms() {
+      const res = await fetch(`../api/rooms.php?schedule_id=${this.scheduleId}`);
+      const data = await res.json();
+      this.rooms = data.rooms || [];
+    },
+    subjectNames(ids) {
+      if (!ids || ids.length === 0) return '(none)';
+      return this.subjects.filter(s => ids.includes(s.id)).map(s => this.subjectLabel(s)).join(', ');
+    },
+    // Compact label for dropdowns: "IT 101 — Introduction to Comp…"
+    shortLabel(sub, max = 42) {
+      const full = this.subjectLabel(sub);
+      return full.length > max ? full.slice(0, max - 1).trimEnd() + '…' : full;
+    },
+    // First few subjects as short chips (code only), plus a "+N more" chip whose
+    // tooltip lists the rest in full.
+    subjectChips(ids, max = 4) {
+      const list = this.subjects.filter(s => (ids || []).includes(s.id));
+      const chip = s => ({ key: 's' + s.id, text: s.subject_code || this.shortLabel(s, 18), title: this.subjectLabel(s), more: false });
+      const chips = list.slice(0, max).map(chip);
+      if (list.length > max) {
+        chips.push({ key: 'more', more: true, text: `+${list.length - max} more`,
+                     title: list.slice(max).map(s => this.subjectLabel(s)).join('\n') });
+      }
+      return chips;
+    },
+    rulesParts(s) {
+      const pats = (s.pattern_ids || []).length
+        ? this.patterns.filter(p => s.pattern_ids.includes(p.id)).map(p => p.name)
+        : ['Any pattern'];
+      const win = s.window_start && s.window_end
+        ? `${this.to12h(s.window_start)} – ${this.to12h(s.window_end)}`
+        : '7:30 AM – 9:00 PM (default)';
+      return { pats, win, brk: this.breakLabel(s) };
+    },
+    subjectLabel(sub) {
+      return sub.subject_code ? `${sub.subject_code} — ${sub.subject_name}` : sub.subject_name;
+    },
+    toggleInArray(arr, value) {
+      const idx = arr.indexOf(value);
+      if (idx === -1) arr.push(value); else arr.splice(idx, 1);
+    },
+    formatTime(t) {
+      // t comes back as "HH:MM:SS" from MySQL TIME columns
+      const [h, m] = t.split(':');
+      const hour = parseInt(h, 10);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const hour12 = ((hour + 11) % 12) + 1;
+      return `${hour12}:${m} ${ampm}`;
+    },
+
+    async addInstructor() {
+      this.errors.instructors = '';
+      const res = await fetch('../api/instructors.php', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schedule_id: this.scheduleId, ...this.newInstructor })
+      });
+      const data = await res.json();
+      if (!res.ok) { this.errors.instructors = data.error; return; }
+      this.newInstructor = { name: '', employment_type: 'full-time', max_teaching_hours: 6.0, subject_ids: [] };
+      await this.loadInstructors();
+    },
+
+    async addSection() {
+      this.errors.sections = '';
+      const res = await fetch('../api/sections.php', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schedule_id: this.scheduleId, ...this.newSection })
+      });
+      const data = await res.json();
+      if (!res.ok) { this.errors.sections = data.error; return; }
+      this.newSection = { section_name: '', department_id: null, program: '', year_level: '', subject_ids: [], pattern_ids: [], window_start: '', window_end: '', break_start: '', break_end: '' };
+      this.applyPreset('day');
+      await this.loadSections();
+    },
+
+    async addSubject() {
+      this.errors.subjects = '';
+      const res = await fetch('../api/subjects.php', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schedule_id: this.scheduleId, ...this.newSubject })
+      });
+      const data = await res.json();
+      if (!res.ok) { this.errors.subjects = data.error; return; }
+      this.newSubject = { subject_code: '', subject_name: '', units: 3.0, department_id: null, sitting_mode: 'auto' };
+      await this.loadSubjects();
+    },
+
+    async addRoom() {
+      this.errors.rooms = '';
+      const res = await fetch('../api/rooms.php', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schedule_id: this.scheduleId, ...this.newRoom })
+      });
+      const data = await res.json();
+      if (!res.ok) { this.errors.rooms = data.error; return; }
+      this.newRoom = { room_name: '' };
+      await this.loadRooms();
+    },
+
+
+
+    // ---- Per-section schedule rules (allowed day-patterns + time window) ----
+    // Presets just pre-fill the form; every value can still be edited.
+    // Day  -> patterns meeting 4 days/week or fewer, 7:30 AM - 5:00 PM, lunch 12:00-1:00 PM
+    // Night -> patterns meeting 5+ days/week (longer weeks, shorter evenings), 5:30 PM - 9:00 PM
+    presetValues(kind) {
+      if (kind === 'night') {
+        return { pattern_ids: this.patterns.filter(p => (p.days || []).length >= 5).map(p => p.id), window_start: '17:30', window_end: '21:00', break_start: '', break_end: '' };
+      }
+      return { pattern_ids: this.patterns.filter(p => (p.days || []).length <= 4).map(p => p.id), window_start: '07:30', window_end: '17:00', break_start: '12:00', break_end: '13:00' };
+    },
+    applyPreset(kind) { Object.assign(this.newSection, this.presetValues(kind)); },
+
+    // ---- Lunch break (mandatory per section) ----
+    breakChips: [
+      { key: 'a', label: '11:30 – 12:30', s: '11:30', e: '12:30' },
+      { key: 'b', label: '12:00 – 1:00 PM', s: '12:00', e: '13:00' },
+      { key: 'c', label: '12:30 – 1:30 PM', s: '12:30', e: '13:30' },
+      { key: 'd', label: '12:00 – 12:30', s: '12:00', e: '12:30' }
+    ],
+    setBreak(m, s, e) { m.break_start = s; m.break_end = e; },
+    breakIs(m, c) { return (m.break_start || '').slice(0, 5) === c.s && (m.break_end || '').slice(0, 5) === c.e; },
+    hasBreak(m) { return !!(m && m.break_start && m.break_end); },
+    breakLabel(m) { return this.hasBreak(m) ? `${this.to12h(m.break_start.slice(0, 5))} – ${this.to12h(m.break_end.slice(0, 5))}` : ''; },
+    bulkBreak: { open: false, break_start: '12:00', break_end: '13:00', scope: 'day', busy: false, error: '', warn: '' },
+    async applyBulkBreak(remove = false) {
+      const b = this.bulkBreak;
+      b.error = ''; b.warn = '';
+      if (!remove && (!b.break_start || !b.break_end || b.break_start >= b.break_end)) { b.error = 'Pick a start time and an end time after it.'; return; }
+      b.busy = true;
+      const r = await this.call('POST', '../api/section_breaks.php', {
+        schedule_id: this.scheduleId, scope: b.scope,
+        break_start: remove ? '' : b.break_start, break_end: remove ? '' : b.break_end
+      });
+      b.busy = false;
+      if (!r.ok) { b.error = r.data.error || 'Could not update the break.'; return; }
+      await this.loadSections();
+      const n = r.data.updated || 0;
+      this.showToast(remove ? `Break removed from ${n} section${n === 1 ? '' : 's'}.` : `Lunch break set on ${n} section${n === 1 ? '' : 's'}.`);
+      if (r.data.existing_clashes) {
+        b.warn = `${r.data.existing_clashes} class${r.data.existing_clashes === 1 ? '' : 'es'} already scheduled now overlap${r.data.existing_clashes === 1 ? 's' : ''} this break. Clear the schedule and run Auto-Generate again, or edit those classes.`;
+      } else { b.open = false; }
+    },
+    to12h(t) {
+      if (!t) return '';
+      const [h, m] = t.split(':');
+      const hour = parseInt(h, 10);
+      return `${((hour + 11) % 12) + 1}:${m} ${hour >= 12 ? 'PM' : 'AM'}`;
+    },
+    rulesLabel(s) {
+      const pats = (s.pattern_ids || []).length
+        ? this.patterns.filter(p => s.pattern_ids.includes(p.id)).map(p => p.name).join(', ')
+        : 'Any pattern';
+      const win = s.window_start && s.window_end
+        ? `${this.to12h(s.window_start)} – ${this.to12h(s.window_end)}`
+        : '7:30 AM – 9:00 PM (default)';
+      return `${pats} · ${win}`;
+    },
+
+
+    // ---- One-sitting rule (schedule-wide) ----
+    sittingTag(s) {
+      const m = s.sitting_mode || 'auto';
+      if (m === 'one') return '◼ One sitting';
+      if (m === 'split') return 'May split across days';
+      return (this.oneSittingHours > 0 && Math.abs(Number(s.units) - this.oneSittingHours) < 0.001) ? '◼ One sitting' : '';
+    },
+    async saveOneSitting(hours) {
+      hours = Math.max(0, Math.min(8, Math.round(Number(hours || 0) * 2) / 2));
+      this.sittingBusy = true;
+      const r = await this.call('PUT', '../api/schedule_settings.php', { schedule_id: this.scheduleId, one_sitting_hours: hours });
+      this.sittingBusy = false;
+      if (r.ok) { this.oneSittingHours = r.data.one_sitting_hours; this.showToast(hours > 0 ? `${hours}-hour subjects will be one sitting.` : 'One-sitting rule turned off.'); }
+      else this.showToast(r.data.error || 'Could not save.');
+    },
+    async runAutoSchedule() {
+      this.autoScheduling = true;
+      this.autoScheduleSummary = null;
+      try {
+        const res = await fetch('../api/auto_schedule.php', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ schedule_id: this.scheduleId })
+        });
+        const data = await res.json();
+        if (!res.ok) { alert(data.error || 'Auto-generate failed.'); return; }
+        this.autoScheduleSummary = data;
+        await this.loadAssignments();
+        if ((data.created_patterns || []).length) await this.loadPatterns();   // single-day patterns were added
+      } finally {
+        this.autoScheduling = false;
+      }
+    },
+
+
+    async addAssignment() {
+      this.errors.assignments = '';
+      const res = await fetch('../api/class_assignments.php', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schedule_id: this.scheduleId, ...this.newAssignment })
+      });
+      const data = await res.json();
+      if (!res.ok) { this.errors.assignments = data.error; return; }
+      this.newAssignment = { instructor_id: '', subject_id: '', section_id: '', pattern_id: '', start_time: '', end_time: '', room: '' };
+      await this.loadAssignments();
+    },
+
+  }
+}
+</script>
+
+
+<!-- Edit window (one for every kind of item) -->
+<div class="modal-back" x-show="editor.open" x-cloak @click.self="closeEditor()" @keydown.escape.window="closeEditor()">
+  <div class="help-card" style="width:min(46rem,100%)">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="section-heading" x-text="editorTitle()"></h2>
+      <button class="btn btn-ghost btn-sm" @click="closeEditor()">Cancel</button>
+    </div>
+    <div x-show="editor.error" x-text="editor.error" class="alert alert-error text-sm py-2 mb-3"></div>
+
+    <div x-show="editor.type === 'department'"><input class="input input-bordered w-full" x-model="editor.draft.name" placeholder="e.g. IT Department" @keydown.enter="saveEditor()"></div>
+    <div x-show="editor.type === 'room'"><input class="input input-bordered w-full" x-model="editor.draft.room_name" placeholder="e.g. Room 101" @keydown.enter="saveEditor()"></div>
+
+    <div x-show="editor.type === 'subject'" class="grid grid-cols-2 gap-2">
+      <input class="input input-bordered" x-model="editor.draft.subject_code" placeholder="Code (e.g. IT 101)">
+      <input class="input input-bordered" type="number" step="0.5" min="0.5" x-model.number="editor.draft.units" placeholder="Units">
+      <input class="input input-bordered col-span-2" x-model="editor.draft.subject_name" placeholder="Subject title">
+      <select class="select select-bordered col-span-2" x-model.number="editor.draft.department_id">
+        <option :value="null">Common / General Education</option>
+        <template x-for="d in departments" :key="d.id"><option :value="d.id" x-text="d.name"></option></template>
+      </select>
+      <select class="select select-bordered col-span-2" x-model="editor.draft.sitting_mode" title="One sitting = a single continuous block on one day, so the teacher stays in one room">
+        <option value="auto">Meeting: automatic</option><option value="one">Always one sitting</option><option value="split">Allow splitting across days</option>
+      </select>
+    </div>
+
+    <div x-show="editor.type === 'instructor'" class="grid grid-cols-2 gap-2">
+      <input class="input input-bordered col-span-2" x-model="editor.draft.name" placeholder="Full name">
+      <select class="select select-bordered" x-model="editor.draft.employment_type"><option value="full-time">Full-time</option><option value="part-time">Part-time</option></select>
+      <input class="input input-bordered" type="number" step="0.5" min="0.5" x-model.number="editor.draft.max_teaching_hours" placeholder="Max teaching hrs">
+    </div>
+
+    <div x-show="editor.type === 'section'" class="flex flex-col gap-2">
+      <div class="grid grid-cols-2 gap-2">
+        <div class="col-span-2">
+          <input class="input input-bordered w-full" :class="nameTaken(editor.draft.section_name, editor.id) ? 'input-error' : ''" x-model="editor.draft.section_name" placeholder="Section name (e.g. BSIT-3A)">
+          <div x-show="nameTaken(editor.draft.section_name, editor.id)" class="text-error text-xs mt-1">That name is already used. Pick a different one.</div>
+        </div>
+        <select class="select select-bordered" x-model.number="editor.draft.department_id">
+          <option :value="null">No department (general)</option>
+          <template x-for="d in departments" :key="d.id"><option :value="d.id" x-text="d.name"></option></template>
+        </select>
+        <input class="input input-bordered" x-model="editor.draft.program" placeholder="Program (e.g. BSIT)">
+        <input class="input input-bordered" x-model="editor.draft.year_level" placeholder="Year level (e.g. 1st Year)">
+      </div>
+      <div class="rules-box">
+            <div class="text-xs font-semibold text-base-content/60 mb-2">When does this class meet?</div>
+            <div class="grid grid-cols-2 gap-2">
+              <button type="button" class="kind-btn" :class="ruleKind(editor.draft) === 'day' ? 'on' : ''" @click="applyEditorPreset('day')">
+                <strong>☀ Day class</strong><span>7:30 AM – 5:00 PM · lunch 12–1</span>
+              </button>
+              <button type="button" class="kind-btn" :class="ruleKind(editor.draft) === 'night' ? 'on' : ''" @click="applyEditorPreset('night')">
+                <strong>🌙 Night class</strong><span>5:30 PM – 9:00 PM, longer week</span>
+              </button>
+            </div>
+            <div class="brk-box">
+              <div class="text-xs font-semibold text-base-content/60 mb-1">🍴 Lunch break <span class="font-normal">— no class is placed during it</span></div>
+              <div class="flex flex-wrap gap-2 items-center">
+                <template x-for="c in breakChips" :key="c.key">
+                  <button type="button" class="brk-chip" :class="breakIs(editor.draft, c) ? 'on' : ''" @click="setBreak(editor.draft, c.s, c.e)" x-text="c.label"></button>
+                </template>
+                <button type="button" class="brk-chip" :class="!hasBreak(editor.draft) ? 'on' : ''" @click="setBreak(editor.draft, '', '')">No break</button>
+              </div>
+              <div class="flex gap-2 items-center flex-wrap mt-2">
+                <span class="text-xs text-base-content/50">Custom:</span>
+                <input type="time" x-model="editor.draft.break_start" class="input input-bordered input-sm">
+                <span>to</span>
+                <input type="time" x-model="editor.draft.break_end" class="input input-bordered input-sm">
+              </div>
+            </div>
+            <details class="mt-2">
+              <summary class="text-sm cursor-pointer" style="color:var(--forest)">Customize days and hours</summary>
+              <div class="mt-2">
+                <div class="text-xs text-base-content/50 mb-1" title="Leave all unchecked to allow any pattern">Days it may use</div>
+                <div class="flex flex-wrap gap-3 mb-2">
+                  <template x-for="p in patterns" :key="p.id">
+                    <label class="label cursor-pointer gap-2 justify-start">
+                      <input type="checkbox" class="checkbox" :checked="editor.draft.pattern_ids.includes(p.id)" @change="toggleInArray(editor.draft.pattern_ids, p.id)">
+                      <span class="label-text" x-text="p.name + ' (' + dayNames(p.days) + ')'"></span>
+                    </label>
+                  </template>
+                  <span x-show="patterns.length === 0" class="text-xs text-base-content/50">Add class days first.</span>
+                </div>
+                <div class="text-xs text-base-content/50 mb-1">Hours</div>
+                <div class="flex gap-2 items-center flex-wrap">
+                  <input type="time" x-model="editor.draft.window_start" class="input input-bordered input-sm">
+                  <span>to</span>
+                  <input type="time" x-model="editor.draft.window_end" class="input input-bordered input-sm">
+                </div>
+              </div>
+            </details>
+          </div>
+    </div>
+
+    <div x-show="editor.type === 'assignment'" class="flex flex-col gap-2">
+      <div class="text-sm" style="color:var(--ink-soft)" x-text="editor.info"></div>
+      <div class="grid grid-cols-2 gap-2">
+        <select class="select select-bordered col-span-2" x-model.number="editor.draft.instructor_id">
+          <template x-for="i in instructors" :key="i.id"><option :value="i.id" x-text="i.name + ((i.subject_ids || []).includes(editor.draft.subject_id) ? '' : '  (not ticked for this subject)')"></option></template>
+        </select>
+        <select class="select select-bordered col-span-2" x-model.number="editor.draft.pattern_id">
+          <template x-for="p in patterns" :key="p.id"><option :value="p.id" x-text="p.name + ' (' + dayNames(p.days) + ')'"></option></template>
+        </select>
+        <input type="time" class="input input-bordered" x-model="editor.draft.start_time">
+        <input type="time" class="input input-bordered" x-model="editor.draft.end_time">
+        <select class="select select-bordered col-span-2" x-model="editor.draft.room">
+          <template x-for="r in rooms" :key="r.id"><option :value="r.room_name" x-text="r.room_name"></option></template>
+        </select>
+      </div>
+    </div>
+
+    <div x-show="['instructor','section'].includes(editor.type)" class="mt-3">
+      <div class="text-xs font-semibold text-base-content/60 mb-1" x-text="editor.type === 'instructor' ? 'Can teach:' : 'Subjects this term:'"></div>
+      <div class="search-box">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" x-model="search.editorSubjects" placeholder="Search subjects…">
+      </div>
+      <template x-for="grp in groupedSubjects(search.editorSubjects)" :key="grp.key">
+        <div class="mb-2">
+          <div class="group-label" x-text="grp.label"></div>
+          <div class="pick-grid">
+            <template x-for="sub in grp.subjects" :key="sub.id">
+              <label class="pick-item" :class="editor.draft.subject_ids.includes(sub.id) ? 'on' : ''" :title="subjectLabel(sub)">
+                <input type="checkbox" class="checkbox" :checked="editor.draft.subject_ids.includes(sub.id)" @change="toggleInArray(editor.draft.subject_ids, sub.id)">
+                <span class="min-w-0"><span class="code block"><span x-text="sub.subject_code || '—'"></span><span class="font-normal text-xs" style="color:var(--ink-soft)" x-text="' · ' + sub.units + ' units'"></span></span><span class="name" x-text="sub.subject_name"></span></span>
+              </label>
+            </template>
+          </div>
+        </div>
+      </template>
+      <span x-show="subjects.length === 0" class="text-xs text-base-content/50">Add subjects first.</span>
+    </div>
+
+    <div class="flex items-center justify-between mt-5">
+      <button class="btn btn-ghost btn-sm text-error" x-show="editor.type === 'assignment'" @click="deleteEditedClass()">Delete class</button>
+      <span x-show="editor.type !== 'assignment'"></span>
+      <button class="btn btn-primary" @click="saveEditor()" :disabled="editor.saving || (editor.type === 'section' && nameTaken(editor.draft.section_name, editor.id))" x-text="editor.saving ? 'Saving…' : (editor.mode === 'duplicate' ? 'Create copy' : 'Save changes')"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Paste a list -->
+<div class="modal-back" x-show="bulk.open" x-cloak @click.self="bulk.open = false" @keydown.escape.window="bulk.open = false">
+  <div class="help-card">
+    <div class="flex items-center justify-between mb-2">
+      <h2 class="section-heading" x-text="'Paste a list of ' + bulkNoun()"></h2>
+      <button class="btn btn-ghost btn-sm" @click="bulk.open = false">Cancel</button>
+    </div>
+    <p class="text-sm mb-2" style="color:var(--ink-soft)" x-text="bulkHint()"></p>
+    <div x-show="bulk.error" x-text="bulk.error" class="alert alert-error text-sm py-2 mb-2"></div>
+    <textarea class="textarea textarea-bordered w-full" rows="8" x-model="bulk.text" :placeholder="bulkExample()"></textarea>
+    <div class="flex items-center justify-between mt-3">
+      <span class="text-sm" style="color:var(--ink-soft)" x-text="bulkLines().length + (bulkLines().length === 1 ? ' line' : ' lines') + ' ready'"></span>
+      <button class="btn btn-primary" @click="runBulk()" :disabled="bulk.busy || bulkLines().length === 0" x-text="bulk.busy ? 'Adding…' : 'Add all'"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Undo toast -->
+<div class="toast" x-show="toast.msg" x-cloak>
+  <span x-text="toast.msg"></span>
+  <button x-show="toast.canUndo" @click="undoToast()">Undo</button>
+</div>
+
+<!-- Help: tour + short answers -->
+<div class="modal-back" x-show="helpOpen" x-cloak @click.self="helpOpen = false" @keydown.escape.window="helpOpen = false">
+  <div class="help-card">
+    <div class="flex items-center justify-between mb-2">
+      <h2 class="section-heading">Help</h2>
+      <button class="btn btn-ghost btn-sm" @click="helpOpen = false">Close</button>
+    </div>
+    <button class="btn btn-primary btn-sm mb-3" @click="helpOpen = false; startTour()">Take the 4-step tour</button>
+    <details class="faq"><summary>A class says "could not place"</summary><p>Check three things: an instructor is ticked for that subject, that instructor has hours left, and a room is free during the section's hours.</p></details>
+    <details class="faq"><summary>How do I make night classes?</summary><p>On Sections, choose <em>Night class</em> for that section. Use <em>Customize</em> to pick its days and hours.</p></details>
+    <details class="faq"><summary>Build schedule didn't change my old classes</summary><p>It only fills classes that have no time yet. Delete a class on the Schedule page, then build again.</p></details>
+    <details class="faq"><summary>Can I edit a class by hand?</summary><p>Yes. On Schedule, press <em>Edit</em> on any class, or open the <em>Weekly grid</em> and click one. Conflicts are checked for you.</p></details>
+    <details class="faq"><summary>How do students see it?</summary><p>Open <em>Student view</em> in the left menu and share that link. No account needed.</p></details>
+  </div>
+</div>
+
+<!-- Guided tour (floating card; the page behind stays usable) -->
+<div class="tour-card" x-show="guideOpen" x-cloak>
+  <div class="text-xs mb-1" style="color:var(--ink-soft)" x-text="'Tour — ' + (guideStep + 1) + ' of ' + tourSteps().length"></div>
+  <div class="section-heading" x-text="tourSteps()[guideStep].title"></div>
+  <p class="text-sm mt-1" style="color:var(--ink-soft)" x-text="tourSteps()[guideStep].body"></p>
+  <div class="flex items-center justify-between mt-4">
+    <button class="btn btn-ghost btn-sm" @click="endTour()">Skip</button>
+    <div class="flex gap-2">
+      <button class="btn btn-sm" x-show="guideStep > 0" @click="goTour(guideStep - 1)">Back</button>
+      <button class="btn btn-primary btn-sm" x-show="guideStep < tourSteps().length - 1" @click="goTour(guideStep + 1)">Next</button>
+      <button class="btn btn-primary btn-sm" x-show="guideStep === tourSteps().length - 1" @click="endTour()">Done</button>
+    </div>
+  </div>
+</div>
+<script>
+  // Phone tables: copy each column header onto its cells so the stacked-card layout can show labels.
+  (function () {
+    var queued = false;
+    function label() {
+      queued = false;
+      document.querySelectorAll('table.ledger-table').forEach(function (t) {
+        var heads = Array.prototype.map.call(t.querySelectorAll('thead th'), function (h) { return h.textContent.trim(); });
+        t.querySelectorAll('tbody tr').forEach(function (tr) {
+          Array.prototype.forEach.call(tr.children, function (td, i) {
+            if (td.tagName === 'TD' && !td.hasAttribute('data-label') && heads[i]) td.setAttribute('data-label', heads[i]);
+          });
+        });
+      });
+    }
+    new MutationObserver(function () { if (!queued) { queued = true; requestAnimationFrame(label); } })
+      .observe(document.body, { childList: true, subtree: true });
+    label();
+  })();
+</script>
+</body>
+</html>

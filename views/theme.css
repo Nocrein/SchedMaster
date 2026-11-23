@@ -1,0 +1,44 @@
+/* Shared look for login, dashboard and accounts (the schedule editor has its
+   own copy of these colours). Mobile rules are at the bottom. */
+:root {
+  --paper: #f2f4ee; --surface: #fbfbf8; --ink: #202a20; --ink-soft: #5b6459;
+  --forest: #1f6b41; --forest-deep: #14492c; --rule: #dcdccb; --rule-strong: #b9bfae; --clay: #a8462c;
+}
+body { background: var(--paper); color: var(--ink); font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif; -webkit-text-size-adjust: 100%; }
+.font-display, .wordmark { font-family: 'Fraunces', Georgia, serif; font-optical-sizing: auto; }
+.wordmark { font-weight: 600; font-size: 1.3rem; color: var(--ink); letter-spacing: .01em; display: inline-flex; align-items: center; gap: .5rem; text-decoration: none; }
+
+.topbar { background: var(--surface); border-bottom: 1px solid var(--rule); }
+
+/* Cards: hairline border, soft shadow, same as the editor panels */
+.card { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; box-shadow: 0 1px 3px rgba(20,40,25,.06); }
+.card-title { font-family: 'Fraunces', Georgia, serif; font-weight: 600; }
+
+/* Brand buttons (daisyUI's defaults are purple/pink) */
+.btn-primary { background: var(--forest); border-color: var(--forest); color: #fff; }
+.btn-primary:hover { background: var(--forest-deep); border-color: var(--forest-deep); }
+.btn-secondary { background: var(--clay); border-color: var(--clay); color: #fff; }
+.btn-secondary:hover { background: #8c3a24; border-color: #8c3a24; }
+.btn-success { background: var(--forest); border-color: var(--forest); color: #fff; }
+.btn-success:hover { background: var(--forest-deep); border-color: var(--forest-deep); }
+.btn-outline { border-color: var(--rule-strong); color: var(--forest-deep); background: transparent; }
+.btn-outline:hover { background: rgba(31,107,65,.08); border-color: var(--forest); color: var(--forest-deep); }
+.toggle-success:checked, .toggle-success[checked="true"] { background-color: #fff; border-color: var(--forest); color: var(--forest); --tglbg: var(--forest); }
+.tabs-boxed { background: rgba(31,107,65,.08); }
+.tabs-boxed .tab-active { background: var(--forest) !important; color: #fff !important; }
+.badge-warning { background: #f1d9a7; border-color: #f1d9a7; color: #6b4a07; }
+.input:focus, .select:focus { outline-color: var(--forest); border-color: var(--forest); }
+.badge-primary { background: var(--forest); border-color: var(--forest); color: #fff; }
+.badge-secondary { background: #d9e6f2; border-color: #d9e6f2; color: #1f4a6b; }
+.link-row code { background: rgba(31,107,65,.07); }
+
+/* ---------- phones ---------- */
+@media (max-width: 640px) {
+  /* 16px inputs stop iOS from zooming the page when a field is tapped */
+  input, select, textarea, .input, .select { font-size: 16px !important; }
+  .btn { min-height: 2.75rem; }
+  .btn-sm { min-height: 2.5rem; }
+  .btn-xs { min-height: 2.25rem; font-size: .8rem; }
+  .card-body { padding: 1.1rem; }
+  .toast { left: 0; right: 0; bottom: 1rem; justify-content: center; }
+}

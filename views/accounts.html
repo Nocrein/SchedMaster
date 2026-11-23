@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<title>SchedMaster — Accounts & access</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/daisyui@4/dist/full.min.css" rel="stylesheet" type="text/css" />
+<link href="theme.css" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js"></script>
+</head>
+<body class="min-h-screen">
+
+<div x-data="accountsPage()" x-init="init()" x-cloak class="max-w-3xl mx-auto p-3 sm:p-4 pb-20">
+
+  <div class="flex items-center justify-between mb-4">
+    <a :href="'schedule.html?id=' + scheduleId" class="btn btn-ghost btn-sm">← Back to schedule</a>
+    <button class="btn btn-ghost btn-sm" @click="logout()">Logout</button>
+  </div>
+
+  <h1 class="font-display text-2xl font-semibold mb-1">Accounts &amp; access</h1>
+  <p class="text-sm opacity-70 mb-4">Teachers and students sign up with your join code. You approve each one, and each can only see their own timetable.</p>
+
+  <div x-show="error" x-text="error" class="alert alert-error text-sm py-2 mb-3"></div>
+
+  <!-- Join code -->
+  <div class="card mb-4"><div class="card-body p-5">
+    <h2 class="font-semibold">Join code</h2>
+    <p class="text-sm opacity-70">Share this with teachers and students. Anyone who has it can <em>request</em> an account; nobody gets in until you approve them.</p>
+    <div class="flex flex-wrap items-center gap-2 mt-2">
+      <code class="text-xl sm:text-2xl font-bold tracking-widest px-4 py-2 rounded" style="background:rgba(31,107,65,.08)" x-text="joinCode || '········'"></code>
+      <button class="btn btn-sm btn-outline" @click="copy(joinCode, 'Code copied')">Copy code</button>
+      <button class="btn btn-sm btn-outline" @click="copy(inviteLink(), 'Invite link copied')">Copy invite link</button>
+      <button class="btn btn-sm btn-ghost" @click="regenerate()">New code…</button>
+    </div>
+    <p class="text-xs opacity-60 mt-1">Made a mistake or the code leaked? "New code" stops the old one from working (existing accounts are not affected).</p>
+  </div></div>
+
+  <!-- Public links -->
+  <div class="card mb-4"><div class="card-body p-5">
+    <label class="flex items-start gap-3 cursor-pointer">
+      <input type="checkbox" class="toggle toggle-success mt-1" :checked="publicEnabled" @change="setPublic($event.target.checked)">
+      <div>
+        <div class="font-semibold">Anyone with the link can view the schedules (no login)</div>
+        <p class="text-sm opacity-70" x-show="publicEnabled">On: the student and teacher links work for anyone. Accounts still give teachers and students their own personal page.</p>
+        <p class="text-sm opacity-70" x-show="!publicEnabled">Off: students see only their own section and teachers only their own timetable, after logging in. Anyone else is turned away.</p>
+      </div>
+    </label>
+  </div></div>
+
+  <!-- Student sign-ups -->
+  <div class="card mb-4"><div class="card-body p-5">
+    <label class="flex items-start gap-3 cursor-pointer">
+      <input type="checkbox" class="toggle toggle-success mt-1" :checked="studentAuto" @change="setStudentAuto($event.target.checked)">
+      <div>
+        <div class="font-semibold">Let students join without my approval</div>
+        <p class="text-sm opacity-70" x-show="studentAuto">On: a student who enters the join code and picks their section gets in right away. Best for large schools. Share the code with your students only, and use "New code" if it leaks.</p>
+        <p class="text-sm opacity-70" x-show="!studentAuto">Off: every student waits for you to approve them (you can approve everyone at once below). Teachers always need your approval either way.</p>
+      </div>
+    </label>
+  </div></div>
+
+  <!-- Pending -->
+  <div class="card mb-4"><div class="card-body p-5">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <h2 class="font-semibold">Waiting for approval <span class="badge badge-warning" x-show="pending.length" x-text="pending.length"></span></h2>
+      <button class="btn btn-sm btn-success" x-show="pendingStudents > 1" @click="approveAllStudents()" x-text="'Approve all ' + pendingStudents + ' students'"></button>
+    </div>
+    <p class="text-sm opacity-60" x-show="!pending.length">No one is waiting right now.</p>
+    <template x-for="a in pendingShown.slice(0, limit)" :key="a.id">
+      <div class="flex flex-wrap items-center justify-between gap-2 py-2 border-b border-base-200 last:border-0">
+        <div>
+          <div class="font-medium"><span x-text="a.name"></span> <span class="badge badge-sm" x-text="roleLabel(a)"></span></div>
+          <div class="text-xs opacity-60"><span x-text="a.email"></span> · wants to be <strong x-text="linkLabel(a)"></strong></div>
+        </div>
+        <div class="flex gap-2">
+          <button class="btn btn-sm btn-success" @click="approve(a)">Approve</button>
+          <button class="btn btn-sm btn-ghost" @click="remove(a, true)">Reject</button>
+        </div>
+      </div>
+    </template>
+    <button class="btn btn-sm btn-ghost" x-show="pendingShown.length > limit" @click="limit += 50" x-text="'Show more (' + (pendingShown.length - limit) + ' more)'"></button>
+  </div></div>
+
+  <!-- Approved -->
+  <div class="card"><div class="card-body p-5">
+    <h2 class="font-semibold">Accounts <span class="opacity-50 font-normal" x-text="'(' + approved.length + ')'"></span></h2>
+    <div class="flex flex-wrap gap-2 my-2" x-show="accounts.length > 5">
+      <input type="search" x-model="search" @input="limit = 50" placeholder="Search name, email, or section…" class="input input-bordered input-sm flex-1 min-w-[12rem]">
+      <select x-model="roleFilter" @change="limit = 50" class="select select-bordered select-sm">
+        <option value="all">Everyone</option><option value="student">Students</option><option value="teacher">Teachers</option>
+      </select>
+    </div>
+    <p class="text-sm opacity-60" x-show="!approved.length">No teacher or student accounts yet. Share the join code above.</p>
+    <p class="text-sm opacity-60" x-show="approved.length && !approvedShown.length">No one matches that search.</p>
+    <div x-show="approvedShown.length">
+      <template x-for="a in approvedShown.slice(0, limit)" :key="a.id">
+        <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 py-3 border-b last:border-0" style="border-color:var(--rule)">
+          <div class="min-w-0">
+            <div class="font-medium"><span x-text="a.name"></span> <span class="badge badge-sm ml-1" :class="a.role === 'teacher' ? 'badge-primary' : 'badge-secondary'" x-text="roleLabel(a)"></span></div>
+            <div class="text-xs opacity-60 break-all" x-text="a.email"></div>
+            <div class="text-xs mt-0.5">Linked to: <strong x-text="linkLabel(a)"></strong></div>
+          </div>
+          <div class="flex gap-1">
+            <button class="btn btn-sm btn-ghost" @click="resetPassword(a)">Reset password</button>
+            <button class="btn btn-sm btn-ghost text-error" @click="remove(a, false)">Remove</button>
+          </div>
+        </div>
+      </template>
+      <button class="btn btn-sm btn-ghost mt-3" x-show="approvedShown.length > limit" @click="limit += 50" x-text="'Show more (' + (approvedShown.length - limit) + ' more)'"></button>
+    </div>
+  </div></div>
+
+  <div class="toast toast-center sm:toast-end" x-show="toast" x-transition><div class="alert alert-success py-2 text-sm" x-text="toast"></div></div>
+</div>
+
+<script>
+function accountsPage() {
+  return {
+    scheduleId: new URLSearchParams(location.search).get('id'),
+    joinCode: '', publicEnabled: true, studentAuto: false, accounts: [], error: '', toast: '',
+    search: '', roleFilter: 'all', limit: 50,
+
+    match(a) {
+      const q = this.search.trim().toLowerCase();
+      if (this.roleFilter !== 'all' && a.role !== this.roleFilter) return false;
+      return !q || (a.name + ' ' + a.email + ' ' + (a.section_name || '') + ' ' + (a.instructor_name || '')).toLowerCase().includes(q);
+    },
+    get pendingShown() { return this.pending.filter(a => this.match(a)); },
+    get approvedShown() { return this.approved.filter(a => this.match(a)); },
+    get pendingStudents() { return this.pending.filter(a => a.role === 'student').length; },
+
+    get pending() { return this.accounts.filter(a => a.status === 'pending'); },
+    get approved() { return this.accounts.filter(a => a.status === 'approved'); },
+    roleLabel(a) { return a.role === 'teacher' ? 'Teacher' : 'Student'; },
+    linkLabel(a) { return (a.role === 'teacher' ? a.instructor_name : a.section_name) || '(no longer linked)'; },
+
+    async init() {
+      if (!this.scheduleId) { location.href = 'dashboard.html'; return; }
+      const me = await fetch('../api/me.php');
+      if (!me.ok) { location.href = 'login.html'; return; }
+      await this.load();
+    },
+
+    async api(method, url, body) {
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+      let data = {}; try { data = await res.json(); } catch (e) {}
+      if (!res.ok) { this.error = data.error || 'Something went wrong.'; return null; }
+      this.error = ''; return data;
+    },
+    async load() {
+      const d = await this.api('GET', '../api/accounts.php?schedule_id=' + this.scheduleId);
+      if (d) { this.joinCode = d.join_code; this.publicEnabled = d.public_enabled; this.studentAuto = d.student_auto_approve; this.accounts = d.accounts; }
+    },
+    flash(msg) { this.toast = msg; setTimeout(() => this.toast = '', 2200); },
+    copy(text, msg) { navigator.clipboard.writeText(text).then(() => this.flash(msg)); },
+    inviteLink() { return location.origin + location.pathname.replace('accounts.html', 'login.html') + '?join=' + this.joinCode; },
+
+    async regenerate() {
+      if (!confirm('Make a new join code? The current one will stop working for new sign-ups.')) return;
+      const d = await this.api('POST', '../api/accounts.php', { schedule_id: this.scheduleId, action: 'regenerate_code' });
+      if (d) { this.joinCode = d.join_code; this.flash('New code ready'); }
+    },
+    async setPublic(on) {
+      const d = await this.api('POST', '../api/accounts.php', { schedule_id: this.scheduleId, action: 'set_public', value: on });
+      if (d) { this.publicEnabled = d.public_enabled; this.flash(on ? 'Public links on' : 'Public links off'); } else { await this.load(); }
+    },
+    async setStudentAuto(on) {
+      const d = await this.api('POST', '../api/accounts.php', { schedule_id: this.scheduleId, action: 'set_student_auto', value: on });
+      if (d) { this.studentAuto = d.student_auto_approve; this.flash(on ? 'Students now join automatically' : 'Students need your approval'); } else { await this.load(); }
+    },
+    async approveAllStudents() {
+      if (!confirm('Approve all ' + this.pendingStudents + ' waiting students?')) return;
+      const d = await this.api('POST', '../api/accounts.php', { schedule_id: this.scheduleId, action: 'approve_all', role: 'student' });
+      if (d) { this.flash(d.approved + ' students approved'); await this.load(); }
+    },
+    async approve(a) {
+      if (await this.api('PUT', '../api/accounts.php', { schedule_id: this.scheduleId, user_id: a.id, action: 'approve' })) { this.flash(a.name + ' approved'); await this.load(); }
+    },
+    async remove(a, isReject) {
+      if (!confirm((isReject ? 'Reject ' : 'Remove the account of ') + a.name + '?')) return;
+      if (await this.api('DELETE', '../api/accounts.php?schedule_id=' + this.scheduleId + '&user_id=' + a.id)) { this.flash(isReject ? 'Request rejected' : 'Account removed'); await this.load(); }
+    },
+    async resetPassword(a) {
+      const pw = prompt('New password for ' + a.name + ' (at least 6 characters):');
+      if (!pw) return;
+      if (await this.api('PUT', '../api/accounts.php', { schedule_id: this.scheduleId, user_id: a.id, action: 'reset_password', password: pw })) this.flash('Password changed');
+    },
+    async logout() { await fetch('../api/logout.php', { method: 'POST' }); location.href = 'login.html'; }
+  }
+}
+</script>
+</body>
+</html>

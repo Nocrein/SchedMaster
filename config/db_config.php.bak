@@ -1,0 +1,8 @@
+<?php
+return [
+    'host'     => 'sql300.infinityfree.com',
+    'port'     => '3306',
+    'database' => 'if0_43248272_schedmaster',
+    'user'     => 'if0_43248272',
+    'password' => 'Sched2026demo',
+];
